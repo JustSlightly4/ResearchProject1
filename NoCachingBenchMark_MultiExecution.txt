@@ -1,0 +1,12 @@
+POSCAR used: POSCAR_0
+Execution time: 0.817591 seconds
+Execution time: 0.002011 seconds
+Execution time: 0.001793 seconds
+Execution time: 0.001787 seconds
+Execution time: 0.001703 seconds
+Execution time: 0.001763 seconds
+Execution time: 0.001824 seconds
+Execution time: 0.001778 seconds
+Execution time: 0.001871 seconds
+Execution time: 0.001783 seconds
+Average execution time: 0.083390 seconds

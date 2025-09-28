@@ -119,6 +119,7 @@ def _add_sphere_mask_cuda(grid, mask, cx, cy, cz, value, ox, oy, oz):
 
 
 class VoxelGrid(object):
+	#Constructor
     def __init__(self, cell, resolution=None, gpts=None):
         self.cell = np.array(cell)
         self.cell_inv = np.linalg.inv(self.cell)
