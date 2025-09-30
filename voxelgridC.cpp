@@ -12,19 +12,24 @@
 #include <pybind11/numpy.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h> // For bind_vector
 
 namespace py = pybind11;
 
+//PYBIND11_MAKE_OPAQUE(std::vector<float>);
+//PYBIND11_MAKE_OPAQUE(std::vector<std::vector<float>>);
+//PYBIND11_MAKE_OPAQUE(std::vector<std::vector<std::vector<float>>>);
+
 class VoxelGridC {
 public:
-    Eigen::Matrix3f cell; //3D matrix
-    Eigen::Matrix3f cell_inv; //The 3D matrix inverse 
-    Eigen::Vector3i gpts; //3 dimensional vector for the grid size
-    Eigen::Vector3f resolution; //3 dimensional vector for the resolution
-    std::vector<std::vector<std::vector<float>>> grid;
+    Eigen::Matrix3d cell; 
+    Eigen::Matrix3d cell_inv; 
+    Eigen::Vector3i gpts;
+    Eigen::Vector3d resolution;
+    py::array_t<float> grid;
 
 	//Constructor
-    VoxelGridC(const Eigen::Matrix3f& cell_input,
+    VoxelGridC(const Eigen::Matrix3d& cell_input,
               float resolution = -1.0f,
               const Eigen::Vector3i& gpts_input = Eigen::Vector3i(0, 0, 0))
     {
@@ -41,36 +46,46 @@ public:
             throw std::invalid_argument("Only one of resolution or gpts can be specified");
         }
 
-        Eigen::Vector3f lengths;
+        Eigen::Vector3d lengths;
         for (int i = 0; i < 3; ++i)
             lengths[i] = cell.row(i).norm();
 
         if (resolution > 0.0f) {
             gpts = (lengths / resolution).array().ceil().cast<int>();
-            this->resolution = lengths.cwiseQuotient(gpts.cast<float>());
+            this->resolution = lengths.cwiseQuotient(gpts.cast<double>());
         } else {
             gpts = gpts_input;
-            this->resolution = lengths.cwiseQuotient(gpts.cast<float>());
+            this->resolution = lengths.cwiseQuotient(gpts.cast<double>());
         }
 
         // Allocate 3D grid
-        grid.resize(gpts[0], std::vector<std::vector<float>>(gpts[1], std::vector<float>(gpts[2], 0.0f)));
-        std::cout << grid.size() << ", " << grid[0].size() << ", " << grid[0][0].size() << "\n";
-    }
+        grid.resize({gpts[0], gpts[1], gpts[2]});
+        
+        //Can not modify the grid directly you have to use what can be
+        //thought about as a pointer every time.
+        auto g = grid.mutable_unchecked<3>();
+        for (std::size_t i = 0; i < gpts[0]; i++) {
+			for (std::size_t j = 0; j < gpts[1]; j++) {
+				for (std::size_t k = 0; k < gpts[2]; k++) {
+					g(i, j, k) = 0.0f;
+				}
+			}
+		}
+	}
     
     //Position_to_index
-    Eigen::Vector3i position_to_index(const Eigen::Vector3f& r) const {
+    Eigen::Vector3i position_to_index(const Eigen::Vector3d& r) const {
         // Map to fractional coordinates
-        Eigen::Vector3f frac = cell_inv * r;
+        Eigen::Vector3d frac = cell_inv * r;
 
         // Wrap into [0,1)
-        Eigen::Vector3f wrapped_frac = frac.array() - frac.array().floor();  // frac % 1.0
+        Eigen::Vector3d wrapped_frac = frac.array() - frac.array().floor();  // frac % 1.0
 
         // Convert back to wrapped real-space position
-        Eigen::Vector3f r_wrapped = cell * wrapped_frac;
+        Eigen::Vector3d r_wrapped = cell * wrapped_frac;
 
         // Convert to final fractional coordinates again
-        Eigen::Vector3f frac_wrapped = cell_inv * r_wrapped;
+        Eigen::Vector3d frac_wrapped = cell_inv * r_wrapped;
 
         // Clip to [0, 1) to avoid boundary issues
         for (int i = 0; i < 3; ++i) {
@@ -81,107 +96,110 @@ public:
         }
 
         // Convert to grid index
-        Eigen::Vector3i idx = (frac_wrapped.array() * gpts.cast<float>().array()).floor().cast<int>();
+        Eigen::Vector3i idx = (frac_wrapped.array() * gpts.cast<double>().array()).floor().cast<int>();
         return idx;
     }
 
 	//Index to Position
-    Eigen::Vector3f index_to_position(int i, int j, int k) const {
-        Eigen::Vector3f frac = (Eigen::Vector3f(i, j, k) + Eigen::Vector3f::Constant(0.5f)).cwiseQuotient(gpts.cast<float>());
-        Eigen::Vector3f r = cell * frac;
+    Eigen::Vector3d index_to_position(int i, int j, int k) const {
+        Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f)).cwiseQuotient(gpts.cast<double>());
+        Eigen::Vector3d r = cell * frac;
         return r;
     }
     
-    //std::cout << "Grid[" << i << "][" << j << "][" << k << "] = " << grid[i][j][k] << (grid[i][j][k] == value ? " == " : " != ") << value << "\n";
     //Set Sphere
-    void set_sphere(const Eigen::Vector3f& center, float radius, float value = 1.0f) {
-        Eigen::Vector3f center_frac = (center.transpose() * cell_inv).unaryExpr([](float x) {
-            return x - std::floor(x);
-        });
-
-        Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<float>().array()).floor().cast<int>();
+    void set_sphere(const Eigen::Vector3d& center, float radius, float value = 1.0f) {
+		auto grid = this->grid.mutable_unchecked<3>();
+        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
+			return x - std::floor(x); // wrap into [0,1)
+		});
+        Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 
 		//Set Sphere Mask
-		int counter = 0;
+		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
+		int count = 0;
         for (int i = 0; i < gpts[0]; ++i) {
             for (int j = 0; j < gpts[1]; ++j) {
                 for (int k = 0; k < gpts[2]; ++k) {
-                    Eigen::Vector3f frac = (Eigen::Vector3f(i, j, k) + Eigen::Vector3f::Constant(0.5f)).cwiseQuotient(gpts.cast<float>());
-                    Eigen::Vector3f disp_frac = frac - center_frac;
-                    disp_frac = disp_frac.unaryExpr([](float x) {
+                    Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f)).cwiseQuotient(gpts.cast<double>());
+                    Eigen::Vector3d disp_frac = frac - center_frac;
+                    disp_frac = disp_frac.unaryExpr([](double x) {
                         return x - std::round(x);
                     });
 
-                    Eigen::Vector3f disp_mic = disp_frac.transpose() * cell;
+                    Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
                     float dist2 = disp_mic.squaredNorm();
                     if (dist2 <= radius * radius) {
-                        grid[i][j][k] = value;
-						++counter;
+                        grid(i, j, k) = value;
+                        ++count;
                     }
                 }
             }
         }
-        std::cout << "Ran " << counter << " times\n";
+        std::cout << "C Set Sphere Count: " << count << "\n";
     }
 
 	//Add Sphere
-    void add_sphere(const Eigen::Vector3f& center, float radius, float value = 1.0f) {
-        Eigen::Vector3f center_frac = (center.transpose() * cell_inv).unaryExpr([](float x) {
-            return x - std::floor(x);
-        });
-
-        Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<float>().array()).floor().cast<int>();
+    void add_sphere(const Eigen::Vector3d& center, float radius, float value = 1.0f) {
+        auto grid = this->grid.mutable_unchecked<3>();
+        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
+			return x - std::floor(x); // wrap into [0,1)
+		});
+        Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 
 		//Add Sphere Mask
+		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
+		int count = 0;
         for (int i = 0; i < gpts[0]; ++i) {
             for (int j = 0; j < gpts[1]; ++j) {
                 for (int k = 0; k < gpts[2]; ++k) {
-                    Eigen::Vector3f frac = (Eigen::Vector3f(i, j, k) + Eigen::Vector3f::Constant(0.5f)).cwiseQuotient(gpts.cast<float>());
-                    Eigen::Vector3f disp_frac = frac - center_frac;
-                    disp_frac = disp_frac.unaryExpr([](float x) {
+                    Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f)).cwiseQuotient(gpts.cast<double>());
+                    Eigen::Vector3d disp_frac = frac - center_frac;
+                    disp_frac = disp_frac.unaryExpr([](double x) {
                         return x - std::round(x);
                     });
 
-                    Eigen::Vector3f disp_mic = disp_frac.transpose() * cell;
+                    Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
                     float dist2 = disp_mic.squaredNorm();
                     if (dist2 <= radius * radius) {
-                        grid[i][j][k] += value;
+                        grid(i, j, k) += value;
+                        ++count;
                     }
                 }
             }
         }
+        std::cout << "C Add Sphere Count: " << count << "\n";
     }
     
     //Multiply Sphere
-    void mul_sphere(const Eigen::Vector3f& center, float radius, float factor = 2.0f) {
-		// Convert center to fractional coordinates, wrapped into [0,1)
-		Eigen::Vector3f center_frac = (center.transpose() * cell_inv).unaryExpr([](float x) {
-			return x - std::floor(x);
+    void mul_sphere(const Eigen::Vector3d& center, float radius, float factor = 2.0f) {
+		auto grid = this->grid.mutable_unchecked<3>();
+		Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
+			return x - std::floor(x); // wrap into [0,1)
 		});
-
-		// Convert fractional coords to grid index
-		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<float>().array()).floor().cast<int>();
+		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 
 		//Multiply Sphere Mask
+		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
 		for (int i = 0; i < gpts[0]; ++i) {
 			for (int j = 0; j < gpts[1]; ++j) {
 				for (int k = 0; k < gpts[2]; ++k) {
 					// Compute fractional coordinates of voxel center
-					Eigen::Vector3f frac = (Eigen::Vector3f(i, j, k) + Eigen::Vector3f::Constant(0.5f))
-											 .cwiseQuotient(gpts.cast<float>());
+					Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f))
+											 .cwiseQuotient(gpts.cast<double>());
 
 					// Displacement in fractional coordinates (apply minimum-image convention)
-					Eigen::Vector3f disp_frac = frac - center_frac;
-					disp_frac = disp_frac.unaryExpr([](float x) {
+					Eigen::Vector3d disp_frac = frac - center_frac;
+					disp_frac = disp_frac.unaryExpr([](double x) {
 						return x - std::round(x);
 					});
 
 					// Convert to Cartesian displacement
-					Eigen::Vector3f disp_mic = disp_frac.transpose() * cell;
+					Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
 					float dist2 = disp_mic.squaredNorm();
 
 					if (dist2 <= radius * radius) {
-						grid[i][j][k] *= factor; // multiply instead of add/set
+						grid(i, j, k) *= factor; // multiply instead of add/set
 					}
 				}
 			}
@@ -189,39 +207,37 @@ public:
 	}
 	
 	//Divide Sphere
-	void div_sphere(const Eigen::Vector3f& center, float radius, float factor = 2.0f) {
+	void div_sphere(const Eigen::Vector3d& center, float radius, float factor = 2.0f) {
 		if (factor == 0.0f) {
 			throw std::invalid_argument("factor must not be zero");
 		}
-
-		// Convert center to fractional coordinates, wrapped into [0,1)
-		Eigen::Vector3f center_frac = (center.transpose() * cell_inv).unaryExpr([](float x) {
-			return x - std::floor(x);
+		auto grid = this->grid.mutable_unchecked<3>();
+		Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
+			return x - std::floor(x); // wrap into [0,1)
 		});
-
-		// Convert fractional coords to grid index
-		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<float>().array()).floor().cast<int>();
+		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 
 		//Divide Sphere mask
+		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
 		for (int i = 0; i < gpts[0]; ++i) {
 			for (int j = 0; j < gpts[1]; ++j) {
 				for (int k = 0; k < gpts[2]; ++k) {
 					// Compute fractional coordinates of voxel center
-					Eigen::Vector3f frac = (Eigen::Vector3f(i, j, k) + Eigen::Vector3f::Constant(0.5f))
-											 .cwiseQuotient(gpts.cast<float>());
+					Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f))
+											 .cwiseQuotient(gpts.cast<double>());
 
 					// Displacement in fractional coordinates (minimum-image convention)
-					Eigen::Vector3f disp_frac = frac - center_frac;
-					disp_frac = disp_frac.unaryExpr([](float x) {
+					Eigen::Vector3d disp_frac = frac - center_frac;
+					disp_frac = disp_frac.unaryExpr([](double x) {
 						return x - std::round(x);
 					});
 
 					// Convert to Cartesian displacement
-					Eigen::Vector3f disp_mic = disp_frac.transpose() * cell;
+					Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
 					float dist2 = disp_mic.squaredNorm();
 
 					if (dist2 <= radius * radius) {
-						grid[i][j][k] /= factor; // divide instead of multiply
+						grid(i, j, k) /= factor; // divide instead of multiply
 					}
 				}
 			}
@@ -230,10 +246,11 @@ public:
 	
 	// Clamp all voxel values to [min_val, max_val]
 	void clamp_grid(float min_val = 0.0f, float max_val = 1.0f) {
+		auto grid = this->grid.mutable_unchecked<3>();
 		for (int i = 0; i < gpts[0]; ++i) {
 			for (int j = 0; j < gpts[1]; ++j) {
 				for (int k = 0; k < gpts[2]; ++k) {
-					float& v = grid[i][j][k];
+					float& v = grid(i, j, k);
 					if (v < min_val) {
 						v = min_val;
 					} else if (v > max_val) {
@@ -245,13 +262,14 @@ public:
 	}
     
     //Sample Voxels in Range
-    std::vector<Eigen::Vector3f> sample_voxels_in_range(float min_val = 0.0f, float max_val = 1.0f, float min_dist = 0.0f, bool return_indices = false,unsigned int seed = 0) const { 
+    std::vector<Eigen::Vector3d> sample_voxels_in_range(float min_val = 0.0f, float max_val = 1.0f, float min_dist = 0.0f, bool return_indices = false,unsigned int seed = 0) const { 
+        auto grid = this->grid.unchecked<3>();
         // Collect candidates
         std::vector<Eigen::Vector3i> candidates;
         for (int i = 0; i < gpts[0]; ++i) {
             for (int j = 0; j < gpts[1]; ++j) {
                 for (int k = 0; k < gpts[2]; ++k) {
-                    float val = grid[i][j][k];
+                    float val = grid(i, j, k);
                     if (val >= min_val && val <= max_val) {
                         candidates.emplace_back(i, j, k);
                     }
@@ -267,7 +285,7 @@ public:
         }
 
         // Precompute positions if needed
-        std::vector<Eigen::Vector3f> positions;
+        std::vector<Eigen::Vector3d> positions;
         if (!return_indices) {
             positions.reserve(candidates.size());
             for (auto& idx : candidates) {
@@ -281,7 +299,7 @@ public:
         std::mt19937 rng(seed);
         std::shuffle(indices.begin(), indices.end(), rng);
 
-        std::vector<Eigen::Vector3f> results;
+        std::vector<Eigen::Vector3d> results;
         float min_dist2 = min_dist * min_dist;
 
         for (size_t idx : indices) {
@@ -289,7 +307,7 @@ public:
                 Eigen::Vector3i ijk = candidates[idx];
                 results.emplace_back((float)ijk[0], (float)ijk[1], (float)ijk[2]);
             } else {
-                const Eigen::Vector3f& pos = positions[idx];
+                const Eigen::Vector3d& pos = positions[idx];
 
                 if (min_dist > 0.0f) {
                     bool too_close = false;
@@ -307,12 +325,21 @@ public:
 
         return results;
     }
+    /*
+    void set_grid(unsigned int i, unsigned int j, unsigned int k, float value) {
+		grid[i][j][k] = value;
+	}
+	*/
 };
 
 
 PYBIND11_MODULE(voxelgridC, m) {
+	namespace py = pybind11;
+	//py::bind_vector<std::vector<float>>(m, "VectorFloat");
+    //py::bind_vector<std::vector<std::vector<float>>>(m, "VectorVectorFloat");
+    //py::bind_vector<std::vector<std::vector<std::vector<float>>>>(m, "Vector3DFloat");
     py::class_<VoxelGridC>(m, "VoxelGridC")
-        .def(py::init<const Eigen::Matrix3f&, float, const Eigen::Vector3i&>(),
+        .def(py::init<const Eigen::Matrix3d&, float, const Eigen::Vector3i&>(),
 			py::arg("cell"),
 			py::arg("resolution") = -1.0f,
 			py::arg("gpts") = Eigen::Vector3i(0, 0, 0))
@@ -347,25 +374,13 @@ PYBIND11_MODULE(voxelgridC, m) {
 			py::arg("min_dist") = 0.0f,
 			py::arg("return_indices") = false,
 			py::arg("seed") = 0)
-		.def_property_readonly("cell", [](const VoxelGridC& g) { return g.cell; })
-        .def_property_readonly("cell_inv", [](const VoxelGridC& g) { return g.cell_inv; })
-        .def_property_readonly("gpts", [](const VoxelGridC& g) { return g.gpts; })
-        .def_property_readonly("resolution", [](const VoxelGridC& g) { return g.resolution; })
-        .def_property_readonly("grid", [](const VoxelGridC& g) {
-			auto& grid = g.grid;
-			py::ssize_t nx = grid.size();
-			py::ssize_t ny = grid[0].size();
-			py::ssize_t nz = grid[0][0].size();
-
-			// Create a NumPy array with shape (nx, ny, nz)
-			py::array_t<double> arr({nx, ny, nz});
-			auto buf = arr.mutable_unchecked<3>();  // 3D array access
-
-			for (py::ssize_t i = 0; i < nx; i++)
-				for (py::ssize_t j = 0; j < ny; j++)
-					for (py::ssize_t k = 0; k < nz; k++)
-						buf(i, j, k) = grid[i][j][k];
-
-			return arr;
-		});
+		//.def_property_readonly("cell", [](const VoxelGridC& g) { return g.cell; })
+        //.def_property_readonly("cell_inv", [](const VoxelGridC& g) { return g.cell_inv; })
+        //.def_property_readonly("gpts", [](const VoxelGridC& g) { return g.gpts; })
+        //.def_property_readonly("resolution", [](const VoxelGridC& g) { return g.resolution; })
+        .def_readwrite("cell", &VoxelGridC::cell)
+        .def_readwrite("cell_inv", &VoxelGridC::cell_inv)
+        .def_readwrite("gpts", &VoxelGridC::gpts)
+        .def_readwrite("resolution", &VoxelGridC::resolution)
+        .def_readwrite("grid", &VoxelGridC::grid);  // read/write access from Python
 }

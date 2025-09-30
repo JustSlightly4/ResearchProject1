@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from numba import njit, prange, cuda
 
 
-@lru_cache(maxsize=50)
+#@lru_cache(maxsize=50)
 def _cached_sphere_mask(radius, gpts, cell):
     #gpts = np.array(gpts)
     #cell = np.array(cell)
@@ -30,7 +30,7 @@ def _set_sphere_mask(grid, center_idx, mask, value):
     nx, ny, nz = grid.shape
     mx, my, mz = mask.shape
     ox, oy, oz = mx // 2, my // 2, mz // 2
-    counter = 0
+    count = 0
     for i in prange(mx):
         for j in range(my):
             for k in range(mz):
@@ -39,16 +39,16 @@ def _set_sphere_mask(grid, center_idx, mask, value):
                     y = (center_idx[1] + j - oy) % ny
                     z = (center_idx[2] + k - oz) % nz
                     grid[x, y, z] = value
-                    counter = counter + 1
-    print("Ran " + str(counter) + " times\n")
+                    count = count + 1
+    print("Set Count Py: " + str(count))
 
 
-@njit(parallel=True)
+#@njit(parallel=True)
 def _add_sphere_mask(grid, center_idx, mask, value):
     nx, ny, nz = grid.shape
     mx, my, mz = mask.shape
     ox, oy, oz = mx // 2, my // 2, mz // 2
-
+    count = 0
     for i in prange(mx):
         for j in range(my):
             for k in range(mz):
@@ -57,6 +57,8 @@ def _add_sphere_mask(grid, center_idx, mask, value):
                     y = (center_idx[1] + j - oy) % ny
                     z = (center_idx[2] + k - oz) % nz
                     grid[x, y, z] += value
+                    count = count + 1
+    print("Add Count Py: " + str(count))
 
 
 @njit(parallel=True)
@@ -144,7 +146,6 @@ class VoxelGrid(object):
             self.resolution = lengths / self.gpts
 
         self.grid = np.zeros((self.gpts[0], self.gpts[1], self.gpts[2]), dtype=np.float32)
-        print(str(len(self.grid)) + ", " + str(len(self.grid[0])) + ", " + str(len(self.grid[0][0])))
 
 
     def position_to_index(self, r):
@@ -442,6 +443,12 @@ class VoxelGrid(object):
 
             selected.append(pos)
             yield tuple(candidates[i]) if return_indices else pos
+   
+    def GetCell(self):
+        return self.cell
+	   
+    def GetCellInv(self):
+        return self.cell_inv
 
 
     def __repr__(self):

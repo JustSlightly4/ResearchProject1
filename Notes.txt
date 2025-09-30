@@ -1,1 +1,5 @@
-1.Keyword arguments still work
+The cells are the same
+
+The inverses are roughly the same there is some minor differences because Python uses float64 and Matrix3f uses float32. Can change to Matrix3d for double precision.
+
+frac_coords seems to be okay
