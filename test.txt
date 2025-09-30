@@ -6,4 +6,6 @@ Execution time: 0.010334 seconds
 Execution time: 0.007488 seconds
 Execution time: 0.006429 seconds
 Execution time: 0.006791 seconds
-Average execution time: 0.010622 seconds
+Execution time: 0.006484 seconds
+Execution time: 0.007943 seconds
+Average execution time: 0.009865 seconds

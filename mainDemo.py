@@ -51,18 +51,18 @@ def task(poscar):
 
 	# Add "outer shells" around atoms
 	for atom in atoms:
-		vg.add_sphere(atom.position,
-		covalent_radii[atom.number] * 1.7,
-		1)
+		vg.add_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.7,
+		value=1)
 
 	# Subtract "inner cores" (set to 0 inside)
 	for atom in atoms:
-		vg.set_sphere(atom.position,
-		covalent_radii[atom.number] * 1.5,
-		0)
+		vg.set_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.5,
+		value=0)
 
 	# Create generator of candidate sites (values between 2.0–3.0)
-	gen = iter(vg.sample_voxels_in_range(2.0, 3.0, 1.2))
+	gen = iter(vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2))
 
 	# Draw 5 samples
 	for attempt in range(5):
@@ -97,13 +97,13 @@ def task2(poscar):
 
 def main():
 	#Settings
-	fileName = "test.txt"
+	fileName = "laptopCPPVoxelGridTest.txt"
 	poscar = "POSCAR_0"
 	
 	#Write the POSCAR used
 	write_poscar_used(fileName, poscar)
 	
-	for i in range(1):
+	for i in range(10):
 		#Create timers and run the task
 		start = time.perf_counter()
 		task(poscar)

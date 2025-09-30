@@ -30,7 +30,7 @@ def _set_sphere_mask(grid, center_idx, mask, value):
     nx, ny, nz = grid.shape
     mx, my, mz = mask.shape
     ox, oy, oz = mx // 2, my // 2, mz // 2
-
+    counter = 0
     for i in prange(mx):
         for j in range(my):
             for k in range(mz):
@@ -39,6 +39,8 @@ def _set_sphere_mask(grid, center_idx, mask, value):
                     y = (center_idx[1] + j - oy) % ny
                     z = (center_idx[2] + k - oz) % nz
                     grid[x, y, z] = value
+                    counter = counter + 1
+    print("Ran " + str(counter) + " times\n")
 
 
 @njit(parallel=True)
@@ -142,6 +144,7 @@ class VoxelGrid(object):
             self.resolution = lengths / self.gpts
 
         self.grid = np.zeros((self.gpts[0], self.gpts[1], self.gpts[2]), dtype=np.float32)
+        print(str(len(self.grid)) + ", " + str(len(self.grid[0])) + ", " + str(len(self.grid[0][0])))
 
 
     def position_to_index(self, r):
