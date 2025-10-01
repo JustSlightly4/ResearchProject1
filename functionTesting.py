@@ -441,6 +441,7 @@ def maskTest():
 		
 	
 def main():
+	task6C()
 	"""
 	start = time.perf_counter()
 	task1Py()
@@ -452,7 +453,5 @@ def main():
 	end = time.perf_counter()
 	print(f"C++ Execution time: {end-start:.6f} seconds\n")
 	"""
-	task6C()
-	
 	return 0
 main()

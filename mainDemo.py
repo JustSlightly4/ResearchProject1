@@ -98,13 +98,13 @@ def taskC(poscar):
 
 def main():
 	#Settings
-	fileName = "laptopCPPVoxelGridTestMulti.txt"
+	fileName = "laptopCPPVoxelGridTestMultiLargeCachingThreaded3.txt"
 	poscar = "POSCAR_0"
 	
 	#Write the POSCAR used
 	write_poscar_used(fileName, poscar)
 	
-	for i in range(10):
+	for i in range(100):
 		#Create timers and run the task
 		start = time.perf_counter()
 		taskC(poscar)

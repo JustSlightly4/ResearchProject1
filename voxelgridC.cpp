@@ -12,18 +12,17 @@
 #include <pybind11/numpy.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
-#include <pybind11/stl_bind.h> // For bind_vector
+#include <pybind11/stl_bind.h>
 
 namespace py = pybind11;
 
-//PYBIND11_MAKE_OPAQUE(std::vector<float>);
-//PYBIND11_MAKE_OPAQUE(std::vector<std::vector<float>>);
-//PYBIND11_MAKE_OPAQUE(std::vector<std::vector<std::vector<float>>>);
-
+//C++ and Python's % operator work differently
+//so this is a work around
 auto wrap_index = [](int idx, int dim) {
     return (idx % dim + dim) % dim; // always in [0, dim-1]
 };
 
+//The Actual VoxelGridC Class
 class VoxelGridC {
 public:
     Eigen::Matrix3d cell; 
@@ -31,6 +30,11 @@ public:
     Eigen::Vector3i gpts;
     Eigen::Vector3d resolution;
     py::array_t<float> grid;
+    static constexpr size_t MAX_CACHE_SIZE = 50; //Max cache size
+    mutable std::list<float> lru_order;  //Tracks usage order
+    mutable std::unordered_map<float,
+		std::pair<py::array_t<bool>, 
+		std::list<float>::iterator>> sphere_mask_cache;
 
 	//Constructor
     VoxelGridC(const Eigen::Matrix3d& cell_input,
@@ -68,6 +72,7 @@ public:
         //Can not modify the grid directly you have to use what can be
         //thought about as a pointer every time.
         auto g = grid.mutable_unchecked<3>();
+        #pragma omp parallel for collapse(3) schedule(static)
         for (std::size_t i = 0; i < gpts[0]; i++) {
 			for (std::size_t j = 0; j < gpts[1]; j++) {
 				for (std::size_t k = 0; k < gpts[2]; k++) {
@@ -131,6 +136,8 @@ public:
         int ox = int(mx * 0.5);
         int oy = int(my * 0.5);
         int oz = int(mz * 0.5);
+        
+        #pragma omp parallel for collapse(3) schedule(static)
         for (int i = 0; i < mx; ++i) {
 			for (int j = 0; j < my; ++j) {
 				for (int k = 0; k < mz; ++k) {
@@ -165,6 +172,8 @@ public:
         int ox = int(mx * 0.5);
         int oy = int(my * 0.5);
         int oz = int(mz * 0.5);
+        
+        #pragma omp parallel for collapse(3) schedule(static)
         for (int i = 0; i < mx; ++i) {
 			for (int j = 0; j < my; ++j) {
 				for (int k = 0; k < mz; ++k) {
@@ -199,6 +208,8 @@ public:
         int ox = int(mx * 0.5);
         int oy = int(my * 0.5);
         int oz = int(mz * 0.5);
+        
+        #pragma omp parallel for collapse(3) schedule(static)
         for (int i = 0; i < mx; ++i) {
 			for (int j = 0; j < my; ++j) {
 				for (int k = 0; k < mz; ++k) {
@@ -233,6 +244,8 @@ public:
         int ox = int(mx * 0.5);
         int oy = int(my * 0.5);
         int oz = int(mz * 0.5);
+        
+        #pragma omp parallel for collapse(3) schedule(static)
         for (int i = 0; i < mx; ++i) {
 			for (int j = 0; j < my; ++j) {
 				for (int k = 0; k < mz; ++k) {
@@ -250,6 +263,7 @@ public:
 	// Clamp all voxel values to [min_val, max_val]
 	void clamp_grid(float min_val = 0.0f, float max_val = 1.0f) {
 		auto grid = this->grid.mutable_unchecked<3>();
+		#pragma omp parallel for collapse(3) schedule(static)
 		for (int i = 0; i < gpts[0]; ++i) {
 			for (int j = 0; j < gpts[1]; ++j) {
 				for (int k = 0; k < gpts[2]; ++k) {
@@ -331,27 +345,37 @@ public:
     
     //NOT ACTUALLY CACHED YET
 	py::array_t<bool> cached_sphere_mask(float radius) {
-		//The size of the grid
-		int nx = gpts(0);
-		int ny = gpts(1);
-		int nz = gpts(2);
 		
+		//Check Cache
+		auto it = sphere_mask_cache.find(radius);
+        if (it != sphere_mask_cache.end()) {
+            // Move this radius to the front (most recently used)
+            lru_order.erase(it->second.second);
+            lru_order.push_front(radius);
+            it->second.second = lru_order.begin();
+            return it->second.first;
+        }
+        
+		//int nx = gpts[0];
+		//int ny = gpts[1];
+		//int nz = gpts[2];
 		//C++ Only mask declaration
-		py::array_t<bool> maskArray({nx, ny, nz});
+		py::array_t<bool> maskArray({gpts[0], gpts[1], gpts[2]});
 		auto mask = maskArray.mutable_unchecked<3>();
 
 		// Center of the sphere in fractional coordinates
 		Eigen::Vector3d center_frac(0.5, 0.5, 0.5);
 
 		//Getting the mesh grid
-		for (int ix = 0; ix < nx; ++ix) {
-			for (int iy = 0; iy < ny; ++iy) {
-				for (int iz = 0; iz < nz; ++iz) {
+		#pragma omp parallel for collapse(3) schedule(static)
+		for (int ix = 0; ix < gpts[0]; ++ix) {
+			for (int iy = 0; iy < gpts[1]; ++iy) {
+				for (int iz = 0; iz < gpts[2]; ++iz) {
 					// Fractional coordinates of the current voxel
 					Eigen::Vector3d frac_coords(
-						(ix + 0.5) / nx,
-						(iy + 0.5) / ny,
-						(iz + 0.5) / nz
+						(ix + 0.5) / gpts[0],
+						(iy + 0.5) / gpts[1],
+						(iz + 0.5) / gpts[2]
 					);
 
 					// Displacement vector in fractional coordinates
@@ -370,6 +394,16 @@ public:
 				}
 			}
 		}
+		// --- Insert into cache ---
+        lru_order.push_front(radius);
+        sphere_mask_cache[radius] = {maskArray, lru_order.begin()};
+
+        // --- Evict oldest if over capacity ---
+        if (sphere_mask_cache.size() > MAX_CACHE_SIZE) {
+            float old_radius = lru_order.back();
+            lru_order.pop_back();
+            sphere_mask_cache.erase(old_radius);
+        }
 		return maskArray;
 	}
 };
@@ -416,13 +450,13 @@ PYBIND11_MODULE(voxelgridC, m) {
 			py::arg("min_dist") = 0.0f,
 			py::arg("return_indices") = false,
 			py::arg("seed") = 0)
-		//.def_property_readonly("cell", [](const VoxelGridC& g) { return g.cell; })
-        //.def_property_readonly("cell_inv", [](const VoxelGridC& g) { return g.cell_inv; })
-        //.def_property_readonly("gpts", [](const VoxelGridC& g) { return g.gpts; })
-        //.def_property_readonly("resolution", [](const VoxelGridC& g) { return g.resolution; })
-        .def_readwrite("cell", &VoxelGridC::cell)
-        .def_readwrite("cell_inv", &VoxelGridC::cell_inv)
-        .def_readwrite("gpts", &VoxelGridC::gpts)
-        .def_readwrite("resolution", &VoxelGridC::resolution)
+		.def_property_readonly("cell", [](const VoxelGridC& g) { return g.cell; })
+        .def_property_readonly("cell_inv", [](const VoxelGridC& g) { return g.cell_inv; })
+        .def_property_readonly("gpts", [](const VoxelGridC& g) { return g.gpts; })
+        .def_property_readonly("resolution", [](const VoxelGridC& g) { return g.resolution; })
+        //.def_readwrite("cell", &VoxelGridC::cell)
+        //.def_readwrite("cell_inv", &VoxelGridC::cell_inv)
+        //.def_readwrite("gpts", &VoxelGridC::gpts)
+        //.def_readwrite("resolution", &VoxelGridC::resolution)
         .def_readwrite("grid", &VoxelGridC::grid);  // read/write access from Python
 }
