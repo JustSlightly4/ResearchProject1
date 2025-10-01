@@ -409,19 +409,50 @@ def testValues():
 		vgC.set_sphere(center=atom.position,
 		radius=covalent_radii[atom.number] * 1.5,
 		value=0)
+	
+	a = vg.grid.flat
+	b = vgC.grid.flat
+
+	for x, y in zip(a, b):
+			print(f"{x}   {y}")
+			
+	print(str(np.allclose(vg.grid, vgC.grid)))  # True, allows tiny differences
+	
+	zero_count = np.count_nonzero(vg.grid == 0)
+	print("Py Zero Count: " + str(zero_count))  # Output: 3	
+	
+	zero_count = np.count_nonzero(vgC.grid == 0)
+	print("C++ Zero Count: " + str(zero_count))  # Output: 3
+	
+	
+def maskTest():
+	# Load atoms from VASP POSCAR
+	atoms = read("POSCAR_0")
+
+	# Create voxel grid with resolution 0.3 Å
+	vg = VoxelGrid(atoms.cell, resolution=0.3)
+	vgC = VoxelGridC(atoms.cell, resolution=0.3)
+	
+	# Add "outer shells" around atoms
+	for atom in atoms:
+		print(np.array_equal(vg.add_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.7,
+		value=1), vgC.cached_sphere_mask(radius=covalent_radii[atom.number] * 1.7)))
 		
-	print(str(np.allclose(vg.resolution, vgC.resolution)))  # True, allows tiny differences
 	
 def main():
-	#start = time.perf_counter()
-	testValues()
-	#end = time.perf_counter()
-	#print(f"Python Execution time: {end-start:.6f} seconds\n")
+	"""
+	start = time.perf_counter()
+	task1Py()
+	end = time.perf_counter()
+	print(f"Python Execution time: {end-start:.6f} seconds\n")
 	
-	#start = time.perf_counter()
-	#task6C()
-	#end = time.perf_counter()
-	#print(f"C++ Execution time: {end-start:.6f} seconds\n")
+	start = time.perf_counter()
+	task1C()
+	end = time.perf_counter()
+	print(f"C++ Execution time: {end-start:.6f} seconds\n")
+	"""
+	task6C()
 	
 	return 0
 main()

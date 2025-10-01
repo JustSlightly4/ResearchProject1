@@ -20,6 +20,10 @@ namespace py = pybind11;
 //PYBIND11_MAKE_OPAQUE(std::vector<std::vector<float>>);
 //PYBIND11_MAKE_OPAQUE(std::vector<std::vector<std::vector<float>>>);
 
+auto wrap_index = [](int idx, int dim) {
+    return (idx % dim + dim) % dim; // always in [0, dim-1]
+};
+
 class VoxelGridC {
 public:
     Eigen::Matrix3d cell; 
@@ -110,96 +114,99 @@ public:
     //Set Sphere
     void set_sphere(const Eigen::Vector3d& center, float radius, float value = 1.0f) {
 		auto grid = this->grid.mutable_unchecked<3>();
+        
         Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
 			return x - std::floor(x); // wrap into [0,1)
 		});
-        Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
-
-		//Set Sphere Mask
-		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
-		int count = 0;
-        for (int i = 0; i < gpts[0]; ++i) {
-            for (int j = 0; j < gpts[1]; ++j) {
-                for (int k = 0; k < gpts[2]; ++k) {
-                    Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f)).cwiseQuotient(gpts.cast<double>());
-                    Eigen::Vector3d disp_frac = frac - center_frac;
-                    disp_frac = disp_frac.unaryExpr([](double x) {
-                        return x - std::round(x);
-                    });
-
-                    Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
-                    float dist2 = disp_mic.squaredNorm();
-                    if (dist2 <= radius * radius) {
-                        grid(i, j, k) = value;
-                        ++count;
-                    }
-                }
-            }
-        }
-        std::cout << "C Set Sphere Count: " << count << "\n";
+		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
+		py::array_t<bool> maskArray = cached_sphere_mask(radius);
+        auto mask = maskArray.mutable_unchecked<3>();
+        
+        int nx = grid.shape(0);
+        int ny = grid.shape(1);
+        int nz = grid.shape(2);
+        int mx = mask.shape(0);
+        int my = mask.shape(1);
+        int mz = mask.shape(2);
+        int ox = int(mx * 0.5);
+        int oy = int(my * 0.5);
+        int oz = int(mz * 0.5);
+        for (int i = 0; i < mx; ++i) {
+			for (int j = 0; j < my; ++j) {
+				for (int k = 0; k < mz; ++k) {
+					if (mask(i, j, k)) {
+						int x = wrap_index(center_idx[0] + i - ox, nx);
+						int y = wrap_index(center_idx[1] + j - oy, ny);
+						int z = wrap_index(center_idx[2] + k - oz, nz);
+						grid(x, y, z) = value;
+					}
+				}
+			}
+		}
     }
-
-	//Add Sphere
+    
+    //Add Sphere
     void add_sphere(const Eigen::Vector3d& center, float radius, float value = 1.0f) {
         auto grid = this->grid.mutable_unchecked<3>();
+        
         Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
 			return x - std::floor(x); // wrap into [0,1)
 		});
-        Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
-
-		//Add Sphere Mask
-		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
-		int count = 0;
-        for (int i = 0; i < gpts[0]; ++i) {
-            for (int j = 0; j < gpts[1]; ++j) {
-                for (int k = 0; k < gpts[2]; ++k) {
-                    Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f)).cwiseQuotient(gpts.cast<double>());
-                    Eigen::Vector3d disp_frac = frac - center_frac;
-                    disp_frac = disp_frac.unaryExpr([](double x) {
-                        return x - std::round(x);
-                    });
-
-                    Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
-                    float dist2 = disp_mic.squaredNorm();
-                    if (dist2 <= radius * radius) {
-                        grid(i, j, k) += value;
-                        ++count;
-                    }
-                }
-            }
-        }
-        std::cout << "C Add Sphere Count: " << count << "\n";
+		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
+		py::array_t<bool> maskArray = cached_sphere_mask(radius);
+        auto mask = maskArray.mutable_unchecked<3>();
+        
+        int nx = grid.shape(0);
+        int ny = grid.shape(1);
+        int nz = grid.shape(2);
+        int mx = mask.shape(0);
+        int my = mask.shape(1);
+        int mz = mask.shape(2);
+        int ox = int(mx * 0.5);
+        int oy = int(my * 0.5);
+        int oz = int(mz * 0.5);
+        for (int i = 0; i < mx; ++i) {
+			for (int j = 0; j < my; ++j) {
+				for (int k = 0; k < mz; ++k) {
+					if (mask(i, j, k)) {
+						int x = wrap_index(center_idx[0] + i - ox, nx);
+						int y = wrap_index(center_idx[1] + j - oy, ny);
+						int z = wrap_index(center_idx[2] + k - oz, nz);
+						grid(x, y, z) += value;
+					}
+				}
+			}
+		}
     }
     
     //Multiply Sphere
     void mul_sphere(const Eigen::Vector3d& center, float radius, float factor = 2.0f) {
 		auto grid = this->grid.mutable_unchecked<3>();
-		Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
+        
+        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
 			return x - std::floor(x); // wrap into [0,1)
 		});
 		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
-
-		//Multiply Sphere Mask
-		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
-		for (int i = 0; i < gpts[0]; ++i) {
-			for (int j = 0; j < gpts[1]; ++j) {
-				for (int k = 0; k < gpts[2]; ++k) {
-					// Compute fractional coordinates of voxel center
-					Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f))
-											 .cwiseQuotient(gpts.cast<double>());
-
-					// Displacement in fractional coordinates (apply minimum-image convention)
-					Eigen::Vector3d disp_frac = frac - center_frac;
-					disp_frac = disp_frac.unaryExpr([](double x) {
-						return x - std::round(x);
-					});
-
-					// Convert to Cartesian displacement
-					Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
-					float dist2 = disp_mic.squaredNorm();
-
-					if (dist2 <= radius * radius) {
-						grid(i, j, k) *= factor; // multiply instead of add/set
+		py::array_t<bool> maskArray = cached_sphere_mask(radius);
+        auto mask = maskArray.mutable_unchecked<3>();
+        
+        int nx = grid.shape(0);
+        int ny = grid.shape(1);
+        int nz = grid.shape(2);
+        int mx = mask.shape(0);
+        int my = mask.shape(1);
+        int mz = mask.shape(2);
+        int ox = int(mx * 0.5);
+        int oy = int(my * 0.5);
+        int oz = int(mz * 0.5);
+        for (int i = 0; i < mx; ++i) {
+			for (int j = 0; j < my; ++j) {
+				for (int k = 0; k < mz; ++k) {
+					if (mask(i, j, k)) {
+						int x = wrap_index(center_idx[0] + i - ox, nx);
+						int y = wrap_index(center_idx[1] + j - oy, ny);
+						int z = wrap_index(center_idx[2] + k - oz, nz);
+						grid(x, y, z) *= factor;
 					}
 				}
 			}
@@ -208,36 +215,32 @@ public:
 	
 	//Divide Sphere
 	void div_sphere(const Eigen::Vector3d& center, float radius, float factor = 2.0f) {
-		if (factor == 0.0f) {
-			throw std::invalid_argument("factor must not be zero");
-		}
 		auto grid = this->grid.mutable_unchecked<3>();
-		Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
+        
+        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
 			return x - std::floor(x); // wrap into [0,1)
 		});
 		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
-
-		//Divide Sphere mask
-		center_frac = Eigen::Vector3d(0.5, 0.5, 0.5);
-		for (int i = 0; i < gpts[0]; ++i) {
-			for (int j = 0; j < gpts[1]; ++j) {
-				for (int k = 0; k < gpts[2]; ++k) {
-					// Compute fractional coordinates of voxel center
-					Eigen::Vector3d frac = (Eigen::Vector3d(i, j, k) + Eigen::Vector3d::Constant(0.5f))
-											 .cwiseQuotient(gpts.cast<double>());
-
-					// Displacement in fractional coordinates (minimum-image convention)
-					Eigen::Vector3d disp_frac = frac - center_frac;
-					disp_frac = disp_frac.unaryExpr([](double x) {
-						return x - std::round(x);
-					});
-
-					// Convert to Cartesian displacement
-					Eigen::Vector3d disp_mic = disp_frac.transpose() * cell;
-					float dist2 = disp_mic.squaredNorm();
-
-					if (dist2 <= radius * radius) {
-						grid(i, j, k) /= factor; // divide instead of multiply
+		py::array_t<bool> maskArray = cached_sphere_mask(radius);
+        auto mask = maskArray.mutable_unchecked<3>();
+        
+        int nx = grid.shape(0);
+        int ny = grid.shape(1);
+        int nz = grid.shape(2);
+        int mx = mask.shape(0);
+        int my = mask.shape(1);
+        int mz = mask.shape(2);
+        int ox = int(mx * 0.5);
+        int oy = int(my * 0.5);
+        int oz = int(mz * 0.5);
+        for (int i = 0; i < mx; ++i) {
+			for (int j = 0; j < my; ++j) {
+				for (int k = 0; k < mz; ++k) {
+					if (mask(i, j, k)) {
+						int x = wrap_index(center_idx[0] + i - ox, nx);
+						int y = wrap_index(center_idx[1] + j - oy, ny);
+						int z = wrap_index(center_idx[2] + k - oz, nz);
+						grid(x, y, z) /= factor;
 					}
 				}
 			}
@@ -325,11 +328,50 @@ public:
 
         return results;
     }
-    /*
-    void set_grid(unsigned int i, unsigned int j, unsigned int k, float value) {
-		grid[i][j][k] = value;
+    
+    //NOT ACTUALLY CACHED YET
+	py::array_t<bool> cached_sphere_mask(float radius) {
+		//The size of the grid
+		int nx = gpts(0);
+		int ny = gpts(1);
+		int nz = gpts(2);
+		
+		//C++ Only mask declaration
+		py::array_t<bool> maskArray({nx, ny, nz});
+		auto mask = maskArray.mutable_unchecked<3>();
+
+		// Center of the sphere in fractional coordinates
+		Eigen::Vector3d center_frac(0.5, 0.5, 0.5);
+
+		//Getting the mesh grid
+		for (int ix = 0; ix < nx; ++ix) {
+			for (int iy = 0; iy < ny; ++iy) {
+				for (int iz = 0; iz < nz; ++iz) {
+					// Fractional coordinates of the current voxel
+					Eigen::Vector3d frac_coords(
+						(ix + 0.5) / nx,
+						(iy + 0.5) / ny,
+						(iz + 0.5) / nz
+					);
+
+					// Displacement vector in fractional coordinates
+					Eigen::Vector3d disp_frac = frac_coords - center_frac;
+
+					// Apply minimum image convention (wrap into [-0.5, 0.5))
+					disp_frac -= disp_frac.array().round().matrix();
+
+					// Convert to Cartesian coordinates
+					Eigen::Vector3d disp_cart = cell * disp_frac;
+
+					// Squared distance
+					double dist2 = disp_cart.squaredNorm();
+
+					mask(ix, iy, iz) = (dist2 <= radius * radius);
+				}
+			}
+		}
+		return maskArray;
 	}
-	*/
 };
 
 

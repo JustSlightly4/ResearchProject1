@@ -1,7 +1,7 @@
 from ase.io import read
 from ase.data import covalent_radii
-#from voxelgrid import VoxelGrid   # import your class
 from voxelgrid import VoxelGrid
+from voxelgridC import VoxelGridC
 import time
 import os
 
@@ -42,12 +42,39 @@ def write_avg_execution_time(filename):
     with open(filename, "a") as f:
         f.write(f"Average execution time: {avg:.6f} seconds\n")
 
-def task(poscar):
+def taskPy(poscar):
 	# Load atoms from VASP POSCAR
 	atoms = read(poscar)
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
+
+	# Add "outer shells" around atoms
+	for atom in atoms:
+		vg.add_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.7,
+		value=1)
+
+	# Subtract "inner cores" (set to 0 inside)
+	for atom in atoms:
+		vg.set_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.5,
+		value=0)
+
+	# Create generator of candidate sites (values between 2.0–3.0)
+	gen = vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2)
+
+	# Draw 5 samples
+	for attempt in range(5):
+		pos = next(gen)
+		print(pos)
+		
+def taskC(poscar):
+	# Load atoms from VASP POSCAR
+	atoms = read(poscar)
+
+	# Create voxel grid with resolution 0.3 Å
+	vg = VoxelGridC(atoms.cell, resolution=0.3)
 
 	# Add "outer shells" around atoms
 	for atom in atoms:
@@ -68,36 +95,10 @@ def task(poscar):
 	for attempt in range(5):
 		pos = next(gen)
 		print(pos)
-		
-def task2(poscar):
-	# Load atoms from VASP POSCAR
-	atoms = read(poscar)
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGrid(atoms.cell, resolution=0.3)
-	
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(
-			atom.position,
-			covalent_radii[atom.number] * 1.7,
-			1
-		)
-
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
-		vg.set_sphere(
-			atom.position,
-			covalent_radii[atom.number] * 1.5,
-			0
-		)
-		
-	print(str(vg.index_to_position(1, 0, 0)))
-	print(str(vg.position_to_index([0.20884615, 0.41769231, 0.41769231])))
 
 def main():
 	#Settings
-	fileName = "laptopCPPVoxelGridTest.txt"
+	fileName = "laptopCPPVoxelGridTestMulti.txt"
 	poscar = "POSCAR_0"
 	
 	#Write the POSCAR used
@@ -106,7 +107,7 @@ def main():
 	for i in range(10):
 		#Create timers and run the task
 		start = time.perf_counter()
-		task(poscar)
+		taskC(poscar)
 		end = time.perf_counter()
 		
 		#Calculate total time and add it to text file

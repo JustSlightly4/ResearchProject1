@@ -5,12 +5,14 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from numba import njit, prange, cuda
 
 
-#@lru_cache(maxsize=50)
+@lru_cache(maxsize=50)
 def _cached_sphere_mask(radius, gpts, cell):
     #gpts = np.array(gpts)
     #cell = np.array(cell)
-    nx, ny, nz = gpts
-    ix, iy, iz = np.meshgrid(
+    nx, ny, nz = gpts #The Size of the grid
+    
+    #Getting the mesh grid
+    ix, iy, iz = np.meshgrid( 
         np.arange(nx),
         np.arange(ny),
         np.arange(nz),
@@ -30,7 +32,6 @@ def _set_sphere_mask(grid, center_idx, mask, value):
     nx, ny, nz = grid.shape
     mx, my, mz = mask.shape
     ox, oy, oz = mx // 2, my // 2, mz // 2
-    count = 0
     for i in prange(mx):
         for j in range(my):
             for k in range(mz):
@@ -39,16 +40,13 @@ def _set_sphere_mask(grid, center_idx, mask, value):
                     y = (center_idx[1] + j - oy) % ny
                     z = (center_idx[2] + k - oz) % nz
                     grid[x, y, z] = value
-                    count = count + 1
-    print("Set Count Py: " + str(count))
 
 
-#@njit(parallel=True)
+@njit(parallel=True)
 def _add_sphere_mask(grid, center_idx, mask, value):
     nx, ny, nz = grid.shape
     mx, my, mz = mask.shape
     ox, oy, oz = mx // 2, my // 2, mz // 2
-    count = 0
     for i in prange(mx):
         for j in range(my):
             for k in range(mz):
@@ -57,8 +55,6 @@ def _add_sphere_mask(grid, center_idx, mask, value):
                     y = (center_idx[1] + j - oy) % ny
                     z = (center_idx[2] + k - oz) % nz
                     grid[x, y, z] += value
-                    count = count + 1
-    print("Add Count Py: " + str(count))
 
 
 @njit(parallel=True)
