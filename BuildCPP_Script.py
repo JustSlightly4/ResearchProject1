@@ -6,16 +6,19 @@ import platform
 
 #python BuildCPP_Script.py build_ext --inplace
 
-eigen_include_dir = os.path.join(os.path.dirname(__file__), "eigen-3.3.9")
-
 # Set C++ standard flag depending on OS
 extra_compile_args = []
+extra_link_args = []
 if platform.system() == "Windows":
+    eigen_include_dir = os.path.join(os.path.dirname(__file__), "eigen-3.3.9-windows")
     extra_compile_args.append("/std:c++17")
 else:  # Linux / macOS
+    eigen_include_dir = os.path.join(os.path.dirname(__file__), "eigen-3.3.9-linux")
     extra_compile_args.append("-std=c++17")
     extra_compile_args.append("-O3")           # optional optimization
     extra_compile_args.append("-march=native") # optional CPU optimization
+    extra_compile_args.append("-fopenmp") # optional CPU optimization
+    extra_link_args.append("-fopenmp")
 
 ext_modules = [
     Extension(
@@ -27,6 +30,7 @@ ext_modules = [
         ],
         language="c++",
         extra_compile_args=extra_compile_args,
+        extra_link_args=extra_link_args,
     )
 ]
 

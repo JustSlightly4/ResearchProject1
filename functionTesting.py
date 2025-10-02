@@ -94,6 +94,83 @@ def plot_3D(vgC, threshold=0.1, s=5, draw_cell=True):
         ax.set_zlabel('z')
         plt.tight_layout()
         plt.show()
+        
+def plot_2D(vgC, axis='z', index=None, position=None, threshold=0.1, draw_cell=True, real_space=True):
+        """
+        Plot a 2D slice of the VoxelGrid along a given axis.
+
+        Parameters:
+        - axis: 'x', 'y', or 'z' (which axis to slice along)
+        - index: int, voxel index to slice at (mutually exclusive with position)
+        - position: float, real-space coordinate along that axis (Å)
+        - threshold: float, only show voxels with value > threshold
+        - draw_cell: bool, whether to overlay the 2D projection of the unit cell (only in real_space mode)
+        - real_space: bool, whether to plot in real-space coordinates (default True).
+        """
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        ax_map = {'x': 0, 'y': 1, 'z': 2}
+        if axis not in ax_map:
+            raise ValueError("Axis must be 'x', 'y', or 'z'")
+        ax_idx = ax_map[axis]
+
+        if index is not None and position is not None:
+            raise ValueError("Specify either `index` or `position`, not both")
+        if position is not None:
+            index = vgC.position_to_index(np.eye(3)[ax_idx] * position)[ax_idx]
+        if index is None:
+            index = vgC.gpts[ax_idx] // 2
+
+        shape = vgC.grid.shape
+        if not (0 <= index < shape[ax_idx]):
+            raise IndexError(f"{axis}-index {index} out of bounds (0 to {shape[ax_idx] - 1})")
+
+        # Slice axes
+        axes = [0, 1, 2]
+        axes.remove(ax_idx)
+        ax1, ax2 = axes
+
+        # Extract 2D slice
+        slicers = [slice(None)] * 3
+        slicers[ax_idx] = index
+        slice_grid = vgC.grid[tuple(slicers)]
+
+        n1, n2 = vgC.gpts[ax1], vgC.gpts[ax2]
+
+        if real_space:
+            i1 = (np.arange(n1) + 0.5) / n1
+            i2 = (np.arange(n2) + 0.5) / n2
+            coords = np.meshgrid(i1, i2, indexing='ij')
+            frac_coords = np.stack(coords, axis=-1)
+            xy = frac_coords @ vgC.cell[[ax1, ax2], :]
+            xvals, yvals = xy[..., 0], xy[..., 1]
+        else:
+            xvals, yvals = np.meshgrid(np.arange(n1), np.arange(n2), indexing='ij')
+
+        mask = slice_grid > threshold
+
+        fig, ax = plt.subplots()
+        sc = ax.scatter(xvals[mask], yvals[mask], c=slice_grid[mask], cmap='viridis', s=10)
+        fig.colorbar(sc, ax=ax, label='Voxel value')
+
+        if draw_cell and real_space:
+            corners_frac = np.array([
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [0, 1],
+                [0, 0]
+            ])
+            corners_real = corners_frac @ vgC.cell[[ax1, ax2], :]
+            ax.plot(corners_real[:, 0], corners_real[:, 1], 'k--', lw=1)
+
+        ax.set_xlabel(f'{["x", "y", "z"][ax1]}' + (' [Å]' if real_space else ' (voxel)'))
+        ax.set_ylabel(f'{["x", "y", "z"][ax2]}' + (' [Å]' if real_space else ' (voxel)'))
+        ax.set_title(f'{axis.upper()} Slice at index {index}')
+        ax.set_aspect('equal')
+        plt.tight_layout()
+        plt.show()
 
 #Standard Given Code from Szilvasi
 def task1Py():
@@ -116,13 +193,14 @@ def task1Py():
 		value=0)
 
 	# Create generator of candidate sites (values between 2.0–3.0)
-	gen = vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2, seed=1)
+	gen = vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2)
 
 	# Draw 5 samples
 	for attempt in range(5):
 		pos = next(gen)
 		print(pos)
-		
+	print("")
+	
 def task1C():
 	# Load atoms from VASP POSCAR
 	atoms = read("POSCAR_0")
@@ -138,88 +216,20 @@ def task1C():
 
 	# Subtract "inner cores" (set to 0 inside)
 	for atom in atoms:
-		
 		vg.set_sphere(center=atom.position,
 		radius=covalent_radii[atom.number] * 1.5,
 		value=0)
 
 	# Create generator of candidate sites (values between 2.0–3.0)
-	gen = iter(vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2, seed=1))
+	gen = iter(vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2))
 
 	# Draw 5 samples
 	for attempt in range(5):
 		pos = next(gen)
 		print(pos)
-
-#Print index (1, 0, 0)
-def task2Py():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGrid(atoms.cell, resolution=0.3)
-
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1)
-
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
+	print("")
 		
-		vg.set_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.5,
-		value=0)
-		
-	print(str(vg.index_to_position(1, 0, 0)))
-	
-def task2C():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGridC(atoms.cell, resolution=0.3)
-
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1)
-
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
-		
-		vg.set_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.5,
-		value=0)
-		
-	print(str(vg.index_to_position(1, 0, 0)))
-	
-#Prints all indexs on the x-axis e.g. (i, 0, 0)
-def task3Py():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGrid(atoms.cell, resolution=0.3)
-
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1)
-
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
-		vg.set_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.5,
-		value=0)
-	
-	for i in range(vg.gpts[0]):
-		print(str(vg.index_to_position(i, 0, 0)))
-		
-def task3C():
+def plot_3D_C():
 	# Load atoms from VASP POSCAR
 	atoms = read("POSCAR_0")
 
@@ -237,162 +247,80 @@ def task3C():
 		vg.set_sphere(center=atom.position,
 		radius=covalent_radii[atom.number] * 1.5,
 		value=0)
-	
-	for i in range(vg.gpts[0]):
-		print(str(vg.index_to_position(i, 0, 0)))
 
-#stuff
-def task4Py():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGrid(atoms.cell, resolution=0.3)
-
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1)
-
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
-		vg.set_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.5,
-		value=0)
-	
-	for atom in atoms:
-		vg.mul_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.1)
-	
-	print(str(vg.index_to_position(1, 0, 0)))
-
-def task4C():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGridC(atoms.cell, resolution=0.3)
-
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1)
-
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
-		vg.set_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.5,
-		value=0)
-	
-	for atom in atoms:
-		vg.mul_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 10)
-	
-	print(str(vg.index_to_position(1, 0, 0)))
-	
-def task5Py():
-    # Identity cell scaled to 10 Å cube
-    cell = [[10.0, 0.0, 0.0],
-            [0.0, 10.0, 0.0],
-            [0.0, 0.0, 10.0]]
-
-    # Build voxel grid with resolution 1.0 Å
-    vg = VoxelGrid(cell, resolution=1.0)
-
-    # Initialize all voxels to 2.0
-    for i in range(vg.gpts[0]):
-        for j in range(vg.gpts[1]):
-            for k in range(vg.gpts[2]):
-                vg.grid[i][j][k] = 2.0 + k
-
-    # Center of the box, radius that definitely covers the middle voxel
-    center = [5.0, 5.0, 5.0]
-    radius = 3.0
-    divisor = 2.0
-
-    # Apply division
-    vg.div_sphere(center=center, radius=radius, factor=divisor)
-    
-    print(str(vg.grid[4][4][3]))
-    print(str(vg.grid[5][5][5]))
-   
-def task5C():
-    # Identity cell scaled to 10 Å cube
-    cell = [[10.0, 0.0, 0.0],
-            [0.0, 10.0, 0.0],
-            [0.0, 0.0, 10.0]]
-
-    # Build voxel grid with resolution 1.0 Å
-    vg = VoxelGridC(cell, resolution=1.0)
-
-    # Initialize all voxels to 2.0
-    for i in range(vg.gpts[0]):
-        for j in range(vg.gpts[1]):
-            for k in range(vg.gpts[2]):
-                vg.grid[i][j][k] = 2.0 + k
-
-    # Center of the box, radius that definitely covers the middle voxel
-    center = [5.0, 5.0, 5.0]
-    radius = 3.0
-    divisor = 2.0
-
-    # Apply division
-    vg.div_sphere(center=center, radius=radius, factor=divisor)
-    
-    print(str(vg.grid[4][4][3]))
-    print(str(vg.grid[5][5][5]))
-    
-def task6Py():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGrid(atoms.cell, resolution=0.3)
-
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1)
-		
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
-		vg.set_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.5,
-		value=0)
-		
-	vg.plot_3D()
-
-def task6C():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGridC(atoms.cell, resolution=0.3)
-
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1)
-	# Subtract "inner cores" (set to 0 inside)
-	for atom in atoms:
-		vg.set_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.5,
-		value=0)
-		
 	plot_3D(vg)
 	
-def testValues():
+def plot_3D_Py():
+	# Load atoms from VASP POSCAR
+	atoms = read("POSCAR_0")
+
+	# Create voxel grid with resolution 0.3 Å
+	vg = VoxelGrid(atoms.cell, resolution=0.3)
+
+	# Add "outer shells" around atoms
+	for atom in atoms:
+		vg.add_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.7,
+		value=1)
+
+	# Subtract "inner cores" (set to 0 inside)
+	for atom in atoms:
+		vg.set_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.5,
+		value=0)
+
+	vg.plot_3D()
+	
+def plot_2D_C():
+	# Load atoms from VASP POSCAR
+	atoms = read("POSCAR_0")
+
+	# Create voxel grid with resolution 0.3 Å
+	vg = VoxelGridC(atoms.cell, resolution=0.3)
+
+	# Add "outer shells" around atoms
+	for atom in atoms:
+		vg.add_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.7,
+		value=1)
+
+	# Subtract "inner cores" (set to 0 inside)
+	for atom in atoms:
+		vg.set_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.5,
+		value=0)
+
+	plot_2D(vg)
+	
+def plot_2D_Py():
+	# Load atoms from VASP POSCAR
+	atoms = read("POSCAR_0")
+
+	# Create voxel grid with resolution 0.3 Å
+	vg = VoxelGrid(atoms.cell, resolution=0.3)
+
+	# Add "outer shells" around atoms
+	for atom in atoms:
+		vg.add_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.7,
+		value=1)
+
+	# Subtract "inner cores" (set to 0 inside)
+	for atom in atoms:
+		vg.set_sphere(center=atom.position,
+		radius=covalent_radii[atom.number] * 1.5,
+		value=0)
+
+	vg.plot_2D()
+		
+def unit_test():
 	# Load atoms from VASP POSCAR
 	atoms = read("POSCAR_0")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
 	vgC = VoxelGridC(atoms.cell, resolution=0.3)
-		
+
 	# Add "outer shells" around atoms
 	for atom in atoms:
 		vg.add_sphere(center=atom.position,
@@ -401,6 +329,7 @@ def testValues():
 		vgC.add_sphere(center=atom.position,
 		radius=covalent_radii[atom.number] * 1.7,
 		value=1)
+
 	# Subtract "inner cores" (set to 0 inside)
 	for atom in atoms:
 		vg.set_sphere(center=atom.position,
@@ -410,39 +339,23 @@ def testValues():
 		radius=covalent_radii[atom.number] * 1.5,
 		value=0)
 	
-	a = vg.grid.flat
-	b = vgC.grid.flat
-
-	for x, y in zip(a, b):
-			print(f"{x}   {y}")
-			
-	print(str(np.allclose(vg.grid, vgC.grid)))  # True, allows tiny differences
+	result = np.array_equal(vg.cell, vgC.cell)
+	print("Unit Test 1 (cell equal): " + str(result))  # True if all elements match exactly, False otherwise
 	
-	zero_count = np.count_nonzero(vg.grid == 0)
-	print("Py Zero Count: " + str(zero_count))  # Output: 3	
+	result = np.allclose(vg.cell_inv, vgC.cell_inv)
+	print("Unit Test 2 (cell_inv equal): " + str(result))  # True if all elements match exactly, False otherwise
 	
-	zero_count = np.count_nonzero(vgC.grid == 0)
-	print("C++ Zero Count: " + str(zero_count))  # Output: 3
+	result = np.array_equal(vg.gpts, vgC.gpts)
+	print("Unit Test 3 (gpts equal): " + str(result))  # True if all elements match exactly, False otherwise
 	
+	result = np.array_equal(vg.resolution, vgC.resolution)
+	print("Unit Test 4 (resolution equal): " + str(result))  # True if all elements match exactly, False otherwise
 	
-def maskTest():
-	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
-
-	# Create voxel grid with resolution 0.3 Å
-	vg = VoxelGrid(atoms.cell, resolution=0.3)
-	vgC = VoxelGridC(atoms.cell, resolution=0.3)
-	
-	# Add "outer shells" around atoms
-	for atom in atoms:
-		print(np.array_equal(vg.add_sphere(center=atom.position,
-		radius=covalent_radii[atom.number] * 1.7,
-		value=1), vgC.cached_sphere_mask(radius=covalent_radii[atom.number] * 1.7)))
-		
+	result = np.allclose(vg.grid, vgC.grid)
+	print("Unit Test 5 (grid equal): " + str(result))  # True if all elements match exactly, False otherwise
 	
 def main():
-	task6C()
-	"""
+	unit_test()
 	start = time.perf_counter()
 	task1Py()
 	end = time.perf_counter()
@@ -452,6 +365,5 @@ def main():
 	task1C()
 	end = time.perf_counter()
 	print(f"C++ Execution time: {end-start:.6f} seconds\n")
-	"""
 	return 0
 main()

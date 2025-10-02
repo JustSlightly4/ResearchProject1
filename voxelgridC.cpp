@@ -1,6 +1,3 @@
-// grid.hpp
-#pragma once
-
 #include <iostream>
 #include <Eigen/Dense>
 #include <vector>
@@ -9,11 +6,11 @@
 #include <tuple>
 #include <random>
 #include <algorithm>
+#include <chrono>
 #include <pybind11/numpy.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
-
 namespace py = pybind11;
 
 //C++ and Python's % operator work differently
@@ -23,7 +20,7 @@ auto wrap_index = [](int idx, int dim) {
 };
 
 //The Actual VoxelGridC Class
-class VoxelGridC {
+class __attribute__((visibility("default"))) VoxelGridC {
 public:
     Eigen::Matrix3d cell; 
     Eigen::Matrix3d cell_inv; 
@@ -31,10 +28,11 @@ public:
     Eigen::Vector3d resolution;
     py::array_t<float> grid;
     static constexpr size_t MAX_CACHE_SIZE = 50; //Max cache size
-    mutable std::list<float> lru_order;  //Tracks usage order
-    mutable std::unordered_map<float,
+    mutable std::list<int> lru_order;  //Tracks usage order
+    mutable std::unordered_map<int,
 		std::pair<py::array_t<bool>, 
-		std::list<float>::iterator>> sphere_mask_cache;
+		std::list<int>::iterator>> sphere_mask_cache;
+	static constexpr float RADIUS_EPS = 1e-5;
 
 	//Constructor
     VoxelGridC(const Eigen::Matrix3d& cell_input,
@@ -73,9 +71,9 @@ public:
         //thought about as a pointer every time.
         auto g = grid.mutable_unchecked<3>();
         #pragma omp parallel for collapse(3) schedule(static)
-        for (std::size_t i = 0; i < gpts[0]; i++) {
-			for (std::size_t j = 0; j < gpts[1]; j++) {
-				for (std::size_t k = 0; k < gpts[2]; k++) {
+        for (int i = 0; i < gpts[0]; i++) {
+			for (int j = 0; j < gpts[1]; j++) {
+				for (int k = 0; k < gpts[2]; k++) {
 					g(i, j, k) = 0.0f;
 				}
 			}
@@ -120,9 +118,8 @@ public:
     void set_sphere(const Eigen::Vector3d& center, float radius, float value = 1.0f) {
 		auto grid = this->grid.mutable_unchecked<3>();
         
-        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
-			return x - std::floor(x); // wrap into [0,1)
-		});
+        Eigen::Vector3d center_frac = (cell_inv * center).array().floor().matrix();
+		center_frac = (cell_inv * center) - center_frac; // wrap into [0,1)
 		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 		py::array_t<bool> maskArray = cached_sphere_mask(radius);
         auto mask = maskArray.mutable_unchecked<3>();
@@ -156,9 +153,8 @@ public:
     void add_sphere(const Eigen::Vector3d& center, float radius, float value = 1.0f) {
         auto grid = this->grid.mutable_unchecked<3>();
         
-        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
-			return x - std::floor(x); // wrap into [0,1)
-		});
+        Eigen::Vector3d center_frac = (cell_inv * center).array().floor().matrix();
+		center_frac = (cell_inv * center) - center_frac; // wrap into [0,1)
 		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 		py::array_t<bool> maskArray = cached_sphere_mask(radius);
         auto mask = maskArray.mutable_unchecked<3>();
@@ -279,7 +275,7 @@ public:
 	}
     
     //Sample Voxels in Range
-    std::vector<Eigen::Vector3d> sample_voxels_in_range(float min_val = 0.0f, float max_val = 1.0f, float min_dist = 0.0f, bool return_indices = false,unsigned int seed = 0) const { 
+    std::vector<Eigen::Vector3d> sample_voxels_in_range(float min_val = 0.0f, float max_val = 1.0f, float min_dist = 0.0f, bool return_indices = false, unsigned int seed = 0) const { 
         auto grid = this->grid.unchecked<3>();
         // Collect candidates
         std::vector<Eigen::Vector3i> candidates;
@@ -310,10 +306,18 @@ public:
             }
         }
 
+		//Set the seed
+        std::mt19937 rng;
+        if (seed == 0) {
+			seed = static_cast<unsigned>(
+				std::chrono::steady_clock::now().time_since_epoch().count()
+			);
+		}
+		rng.seed(seed);
+        
         // Shuffle candidate indices
         std::vector<size_t> indices(candidates.size());
         std::iota(indices.begin(), indices.end(), 0);
-        std::mt19937 rng(seed);
         std::shuffle(indices.begin(), indices.end(), rng);
 
         std::vector<Eigen::Vector3d> results;
@@ -322,7 +326,7 @@ public:
         for (size_t idx : indices) {
             if (return_indices) {
                 Eigen::Vector3i ijk = candidates[idx];
-                results.emplace_back((float)ijk[0], (float)ijk[1], (float)ijk[2]);
+                results.emplace_back((double)ijk[0], (double)ijk[1], (double)ijk[2]);
             } else {
                 const Eigen::Vector3d& pos = positions[idx];
 
@@ -339,22 +343,36 @@ public:
                 results.push_back(pos);
             }
         }
+        
+        /*
+        // Now convert to py::array_t<float>
+		int N = temp_results.size();
+		py::array_t<float> results({N, 3});
+		auto r = results.mutable_unchecked<2>();
+
+		for (ssize_t i = 0; i < N; ++i) {
+			r(i, 0) = (float)temp_results[i][0];
+			r(i, 1) = (float)temp_results[i][1];
+			r(i, 2) = (float)temp_results[i][2];
+		}
+		*/
 
         return results;
     }
     
-    //NOT ACTUALLY CACHED YET
 	py::array_t<bool> cached_sphere_mask(float radius) {
 		
 		//Check Cache
-		auto it = sphere_mask_cache.find(radius);
+		int key = static_cast<int>(radius / RADIUS_EPS); //float are prone to error so make 
+		auto it = sphere_mask_cache.find(key);
         if (it != sphere_mask_cache.end()) {
-            // Move this radius to the front (most recently used)
+			//std::cout << "Cache Hit!" << "\n";
             lru_order.erase(it->second.second);
-            lru_order.push_front(radius);
+            lru_order.push_front(key);
             it->second.second = lru_order.begin();
             return it->second.first;
         }
+        //std::cout << "Cache Miss!" << "\n";
         
 		//int nx = gpts[0];
 		//int ny = gpts[1];
@@ -395,6 +413,68 @@ public:
 			}
 		}
 		// --- Insert into cache ---
+        lru_order.push_front(key);
+        sphere_mask_cache[key] = {maskArray, lru_order.begin()};
+
+        // --- Evict oldest if over capacity ---
+        if (sphere_mask_cache.size() > MAX_CACHE_SIZE) {
+            int old_key = lru_order.back();
+            lru_order.pop_back();
+            sphere_mask_cache.erase(old_key);
+        }
+		return maskArray;
+	}
+	/*
+	py::array_t<bool> cached_sphere_mask(float radius) {
+		
+		//Check Cache
+		auto it = sphere_mask_cache.find(radius);
+        if (it != sphere_mask_cache.end()) {
+            lru_order.erase(it->second.second);
+            lru_order.push_front(radius);
+            it->second.second = lru_order.begin();
+            return it->second.first;
+        }
+        
+        int diam_x = static_cast<int>(std::ceil(2 * radius / resolution[0])) + 1;
+		int diam_y = static_cast<int>(std::ceil(2 * radius / resolution[1])) + 1;
+		int diam_z = static_cast<int>(std::ceil(2 * radius / resolution[2])) + 1;
+		//C++ Only mask declaration
+		py::array_t<bool> maskArray({diam_x, diam_y, diam_z});
+		auto mask = maskArray.mutable_unchecked<3>();
+
+		// Center of the sphere in fractional coordinates
+		Eigen::Vector3d center_frac(0.5, 0.5, 0.5);
+
+		//Getting the mesh grid
+		#pragma omp parallel for collapse(3) schedule(static)
+		for (int ix = 0; ix < diam_x; ++ix) {
+			for (int iy = 0; iy < diam_y; ++iy) {
+				for (int iz = 0; iz < diam_z; ++iz) {
+					// Fractional coordinates of the current voxel
+					Eigen::Vector3d frac_coords(
+						(ix + 0.5) / diam_x,
+						(iy + 0.5) / diam_y,
+						(iz + 0.5) / diam_z
+					);
+
+					// Displacement vector in fractional coordinates
+					Eigen::Vector3d disp_frac = frac_coords - center_frac;
+
+					// Apply minimum image convention (wrap into [-0.5, 0.5))
+					disp_frac -= disp_frac.array().round().matrix();
+
+					// Convert to Cartesian coordinates
+					Eigen::Vector3d disp_cart = cell * disp_frac;
+
+					// Squared distance
+					double dist2 = disp_cart.squaredNorm();
+
+					mask(ix, iy, iz) = (dist2 <= radius * radius);
+				}
+			}
+		}
+		// --- Insert into cache ---
         lru_order.push_front(radius);
         sphere_mask_cache[radius] = {maskArray, lru_order.begin()};
 
@@ -406,6 +486,7 @@ public:
         }
 		return maskArray;
 	}
+	*/
 };
 
 
