@@ -188,9 +188,8 @@ public:
     void mul_sphere(const Eigen::Vector3d& center, float radius, float factor = 2.0f) {
 		auto grid = this->grid.mutable_unchecked<3>();
         
-        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
-			return x - std::floor(x); // wrap into [0,1)
-		});
+        Eigen::Vector3d center_frac = (cell_inv * center).array().floor().matrix();
+		center_frac = (cell_inv * center) - center_frac; // wrap into [0,1)
 		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 		py::array_t<bool> maskArray = cached_sphere_mask(radius);
         auto mask = maskArray.mutable_unchecked<3>();
@@ -224,9 +223,8 @@ public:
 	void div_sphere(const Eigen::Vector3d& center, float radius, float factor = 2.0f) {
 		auto grid = this->grid.mutable_unchecked<3>();
         
-        Eigen::Vector3d center_frac = (center.transpose() * cell_inv).unaryExpr([](double x) {
-			return x - std::floor(x); // wrap into [0,1)
-		});
+        Eigen::Vector3d center_frac = (cell_inv * center).array().floor().matrix();
+		center_frac = (cell_inv * center) - center_frac; // wrap into [0,1)
 		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
 		py::array_t<bool> maskArray = cached_sphere_mask(radius);
         auto mask = maskArray.mutable_unchecked<3>();

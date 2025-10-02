@@ -4,7 +4,7 @@ import os
 import sys
 import platform
 
-#python BuildCPP_Script.py build_ext --inplace
+#python3 BuildCPP_Script.py build_ext --inplace
 
 # Set C++ standard flag depending on OS
 extra_compile_args = []
