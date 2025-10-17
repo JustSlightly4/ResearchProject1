@@ -1,3 +1,8 @@
+#ifdef _WIN32
+#define EXPORT __declspec(dllexport)
+#else
+#define EXPORT __attribute__((visibility("default")))
+#endif
 #include <iostream>
 #include <Eigen/Dense>
 #include <vector>
@@ -20,7 +25,7 @@ auto wrap_index = [](int idx, int dim) {
 };
 
 //The Actual VoxelGridC Class
-class __attribute__((visibility("default"))) VoxelGridC {
+class EXPORT VoxelGridC {
 public:
     Eigen::Matrix3d cell; 
     Eigen::Matrix3d cell_inv; 

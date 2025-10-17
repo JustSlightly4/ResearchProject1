@@ -47,6 +47,7 @@ def _add_sphere_mask(grid, center_idx, mask, value):
     nx, ny, nz = grid.shape
     mx, my, mz = mask.shape
     ox, oy, oz = mx // 2, my // 2, mz // 2
+    #print("Grid x, y, z: " + str(nx) + ", " + str(ny) + ", " + str(nz), "Mask x, y, z: " + str(ox) + ", " + str(oy) + ", " + str(oz))
     for i in prange(mx):
         for j in range(my):
             for k in range(mz):
