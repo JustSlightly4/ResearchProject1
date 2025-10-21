@@ -175,7 +175,7 @@ def plot_2D(vgC, axis='z', index=None, position=None, threshold=0.1, draw_cell=T
 #Standard Given Code from Szilvasi
 def task1Py():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
+	atoms = read("POSCAR_1")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
@@ -203,7 +203,7 @@ def task1Py():
 	
 def task1C():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
+	atoms = read("POSCAR_1")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGridC(atoms.cell, resolution=0.3)
@@ -231,7 +231,7 @@ def task1C():
 		
 def plot_3D_C():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
+	atoms = read("POSCAR_1")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGridC(atoms.cell, resolution=0.3)
@@ -252,7 +252,7 @@ def plot_3D_C():
 	
 def plot_3D_Py():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
+	atoms = read("POSCAR_1")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
@@ -273,7 +273,7 @@ def plot_3D_Py():
 	
 def plot_2D_C():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
+	atoms = read("POSCAR_1")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGridC(atoms.cell, resolution=0.3)
@@ -294,7 +294,7 @@ def plot_2D_C():
 	
 def plot_2D_Py():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
+	atoms = read("POSCAR_1")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
@@ -315,7 +315,7 @@ def plot_2D_Py():
 		
 def unit_test():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_0")
+	atoms = read("POSCAR_1")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
@@ -356,6 +356,7 @@ def unit_test():
 	
 def main():
 	unit_test()
+	"""
 	start = time.perf_counter()
 	task1Py()
 	end = time.perf_counter()
@@ -365,5 +366,6 @@ def main():
 	task1C()
 	end = time.perf_counter()
 	print(f"C++ Execution time: {end-start:.6f} seconds\n")
+	"""
 	return 0
 main()

@@ -20,9 +20,9 @@ namespace py = pybind11;
 
 //C++ and Python's % operator work differently
 //so this is a work around
-auto wrap_index = [](int idx, int dim) {
+inline int wrap_index(int idx, int dim) {
     return (idx % dim + dim) % dim; // always in [0, dim-1]
-};
+}
 
 //The Actual VoxelGridC Class
 class EXPORT VoxelGridC {
@@ -346,27 +346,13 @@ public:
                 results.push_back(pos);
             }
         }
-        
-        /*
-        // Now convert to py::array_t<float>
-		int N = temp_results.size();
-		py::array_t<float> results({N, 3});
-		auto r = results.mutable_unchecked<2>();
-
-		for (ssize_t i = 0; i < N; ++i) {
-			r(i, 0) = (float)temp_results[i][0];
-			r(i, 1) = (float)temp_results[i][1];
-			r(i, 2) = (float)temp_results[i][2];
-		}
-		*/
-
         return results;
     }
     
 	py::array_t<bool> cached_sphere_mask(float radius) {
 		
 		//Check Cache
-		int key = static_cast<int>(radius / RADIUS_EPS); //float are prone to error so make 
+		int key = static_cast<int>(radius / RADIUS_EPS); //float are prone to error so make into int
 		auto it = sphere_mask_cache.find(key);
         if (it != sphere_mask_cache.end()) {
 			//std::cout << "Cache Hit!" << "\n";
@@ -427,77 +413,11 @@ public:
         }
 		return maskArray;
 	}
-	/*
-	py::array_t<bool> cached_sphere_mask(float radius) {
-		
-		//Check Cache
-		auto it = sphere_mask_cache.find(radius);
-        if (it != sphere_mask_cache.end()) {
-            lru_order.erase(it->second.second);
-            lru_order.push_front(radius);
-            it->second.second = lru_order.begin();
-            return it->second.first;
-        }
-        
-        int diam_x = static_cast<int>(std::ceil(2 * radius / resolution[0])) + 1;
-		int diam_y = static_cast<int>(std::ceil(2 * radius / resolution[1])) + 1;
-		int diam_z = static_cast<int>(std::ceil(2 * radius / resolution[2])) + 1;
-		//C++ Only mask declaration
-		py::array_t<bool> maskArray({diam_x, diam_y, diam_z});
-		auto mask = maskArray.mutable_unchecked<3>();
-
-		// Center of the sphere in fractional coordinates
-		Eigen::Vector3d center_frac(0.5, 0.5, 0.5);
-
-		//Getting the mesh grid
-		#pragma omp parallel for collapse(3) schedule(static)
-		for (int ix = 0; ix < diam_x; ++ix) {
-			for (int iy = 0; iy < diam_y; ++iy) {
-				for (int iz = 0; iz < diam_z; ++iz) {
-					// Fractional coordinates of the current voxel
-					Eigen::Vector3d frac_coords(
-						(ix + 0.5) / diam_x,
-						(iy + 0.5) / diam_y,
-						(iz + 0.5) / diam_z
-					);
-
-					// Displacement vector in fractional coordinates
-					Eigen::Vector3d disp_frac = frac_coords - center_frac;
-
-					// Apply minimum image convention (wrap into [-0.5, 0.5))
-					disp_frac -= disp_frac.array().round().matrix();
-
-					// Convert to Cartesian coordinates
-					Eigen::Vector3d disp_cart = cell * disp_frac;
-
-					// Squared distance
-					double dist2 = disp_cart.squaredNorm();
-
-					mask(ix, iy, iz) = (dist2 <= radius * radius);
-				}
-			}
-		}
-		// --- Insert into cache ---
-        lru_order.push_front(radius);
-        sphere_mask_cache[radius] = {maskArray, lru_order.begin()};
-
-        // --- Evict oldest if over capacity ---
-        if (sphere_mask_cache.size() > MAX_CACHE_SIZE) {
-            float old_radius = lru_order.back();
-            lru_order.pop_back();
-            sphere_mask_cache.erase(old_radius);
-        }
-		return maskArray;
-	}
-	*/
 };
 
 
 PYBIND11_MODULE(voxelgridC, m) {
 	namespace py = pybind11;
-	//py::bind_vector<std::vector<float>>(m, "VectorFloat");
-    //py::bind_vector<std::vector<std::vector<float>>>(m, "VectorVectorFloat");
-    //py::bind_vector<std::vector<std::vector<std::vector<float>>>>(m, "Vector3DFloat");
     py::class_<VoxelGridC>(m, "VoxelGridC")
         .def(py::init<const Eigen::Matrix3d&, float, const Eigen::Vector3i&>(),
 			py::arg("cell"),
@@ -538,9 +458,5 @@ PYBIND11_MODULE(voxelgridC, m) {
         .def_property_readonly("cell_inv", [](const VoxelGridC& g) { return g.cell_inv; })
         .def_property_readonly("gpts", [](const VoxelGridC& g) { return g.gpts; })
         .def_property_readonly("resolution", [](const VoxelGridC& g) { return g.resolution; })
-        //.def_readwrite("cell", &VoxelGridC::cell)
-        //.def_readwrite("cell_inv", &VoxelGridC::cell_inv)
-        //.def_readwrite("gpts", &VoxelGridC::gpts)
-        //.def_readwrite("resolution", &VoxelGridC::resolution)
-        .def_readwrite("grid", &VoxelGridC::grid);  // read/write access from Python
+        .def_property_readonly("grid", [](const VoxelGridC& g) { return g.grid; });  // read/write access from Python
 }

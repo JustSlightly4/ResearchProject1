@@ -62,7 +62,7 @@ def taskPy(poscar):
 		value=0)
 
 	# Create generator of candidate sites (values between 2.0–3.0)
-	gen = vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2)
+	gen = vg.sample_voxels_in_range(min_val=0.0, max_val=3.0, min_dist=1.2)
 
 	# Draw 5 samples
 	for attempt in range(5):
@@ -89,7 +89,7 @@ def taskC(poscar):
 		value=0)
 
 	# Create generator of candidate sites (values between 2.0–3.0)
-	gen = iter(vg.sample_voxels_in_range(min_val=2.0, max_val=3.0, min_dist=1.2))
+	gen = iter(vg.sample_voxels_in_range(min_val=0.0, max_val=3.0, min_dist=1.2))
 
 	# Draw 5 samples
 	for attempt in range(5):
@@ -98,13 +98,13 @@ def taskC(poscar):
 
 def main():
 	#Settings
-	fileName = "LinuxTestC.txt"
-	poscar = "POSCAR_0"
+	fileName = "LargeTestCWithInline.txt"
+	poscar = "POSCAR_1"
 	
 	#Write the POSCAR used
 	write_poscar_used(fileName, poscar)
 	
-	for i in range(1000):
+	for i in range(100):
 		#Create timers and run the task
 		start = time.perf_counter()
 		taskC(poscar)
