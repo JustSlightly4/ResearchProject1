@@ -315,7 +315,7 @@ def plot_2D_Py():
 		
 def unit_test():
 	# Load atoms from VASP POSCAR
-	atoms = read("POSCAR_1")
+	atoms = read("Nanotube.POSCAR")
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
@@ -339,20 +339,29 @@ def unit_test():
 		radius=covalent_radii[atom.number] * 1.5,
 		value=0)
 	
-	result = np.array_equal(vg.cell, vgC.cell)
-	print("Unit Test 1 (cell equal): " + str(result))  # True if all elements match exactly, False otherwise
+	result1 = np.array_equal(vg.cell, vgC.cell)
+	print("Unit Test 1 (cell equal): " + str(result1))  # True if all elements match exactly, False otherwise
 	
-	result = np.allclose(vg.cell_inv, vgC.cell_inv)
-	print("Unit Test 2 (cell_inv equal): " + str(result))  # True if all elements match exactly, False otherwise
+	result2 = np.allclose(vg.cell_inv, vgC.cell_inv)
+	print("Unit Test 2 (cell_inv equal): " + str(result2))  # True if all elements match exactly, False otherwise
 	
-	result = np.array_equal(vg.gpts, vgC.gpts)
-	print("Unit Test 3 (gpts equal): " + str(result))  # True if all elements match exactly, False otherwise
+	result3 = np.array_equal(vg.gpts, vgC.gpts)
+	print("Unit Test 3 (gpts equal): " + str(result3))  # True if all elements match exactly, False otherwise
 	
-	result = np.array_equal(vg.resolution, vgC.resolution)
-	print("Unit Test 4 (resolution equal): " + str(result))  # True if all elements match exactly, False otherwise
+	result4 = np.array_equal(vg.resolution, vgC.resolution)
+	print("Unit Test 4 (resolution equal): " + str(result4))  # True if all elements match exactly, False otherwise
 	
-	result = np.allclose(vg.grid, vgC.grid)
-	print("Unit Test 5 (grid equal): " + str(result))  # True if all elements match exactly, False otherwise
+	result5 = np.allclose(vg.grid, vgC.grid)
+	print("Unit Test 5 (grid equal): " + str(result5))  # True if all elements match exactly, False otherwise
+	
+	if not result5:
+		print("\nUnit Test 5 Failed!")
+		mask = ~np.isclose(vg.grid, vgC.grid);
+		indices = np.argwhere(mask)
+		print("Py Size: " + str(vg.grid.shape) + ", C Size: " + str(vgC.grid.shape))
+		print("Amount of failing indices: " + str(len(indices)))
+		for i in range(len(indices)):
+			print(str(i) + ": " + str(indices[i]) + ", Py: " + str(vg.grid[indices[i][0]][indices[i][1]][indices[i][2]]) + ", C: " + str(vgC.grid[indices[i][0]][indices[i][1]][indices[i][2]]))
 	
 def main():
 	unit_test()
