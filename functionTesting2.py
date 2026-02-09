@@ -5,97 +5,6 @@ from voxelgrid import VoxelGrid
 import time
 import numpy as np
 
-def compare_files(file1, file2):
-    difference_count = 0
-    line_count1 = 0
-    line_count2 = 0
-
-    # Open both files
-    with open(file1, "r") as f1, open(file2, "r") as f2:
-        line_num = 1
-        identical = True
-
-        # Read both line-by-line simultaneously
-        for line1, line2 in zip(f1, f2):
-            line_count1 += 1
-            line_count2 += 1
-
-            if line1 != line2:
-                print(f"❌ Difference at line {line_num}:")
-                print(f"  File 1: {line1.strip()}")
-                print(f"  File 2: {line2.strip()}\n")
-                identical = False
-                difference_count += 1
-
-            line_num += 1
-
-        # Count any remaining lines if files are of different lengths
-        for _ in f1:
-            line_count1 += 1
-        for _ in f2:
-            line_count2 += 1
-
-    # Summary output
-    print("------ Summary ------")
-    print(f"File 1: {file1} — {line_count1} lines")
-    print(f"File 2: {file2} — {line_count2} lines")
-
-    if line_count1 != line_count2:
-        print("⚠️ Files have different lengths!")
-
-    if difference_count == 0 and line_count1 == line_count2:
-        print("✅ Files are identical!")
-    else:
-        print(f"⚠️ Total differences found: {difference_count}")
-        
-def compare_files_allclose(file1, file2, rtol=1e-5, atol=1e-8):
-    difference_count = 0
-    line_count1 = 0
-    line_count2 = 0
-
-    with open(file1, "r") as f1, open(file2, "r") as f2:
-        line_num = 1
-        identical = True
-
-        for line1, line2 in zip(f1, f2):
-            line_count1 += 1
-            line_count2 += 1
-
-            # Split each line into floats
-            try:
-                vals1 = np.fromstring(line1, sep=' ')
-                vals2 = np.fromstring(line2, sep=' ')
-            except ValueError:
-                print(f"⚠️ Could not parse line {line_num} as floats.")
-                vals1 = vals2 = np.array([])
-
-            # Check closeness
-            if not np.allclose(vals1, vals2, rtol=rtol, atol=atol, equal_nan=True):
-                print(f"❌ Difference at line {line_num}:")
-                print(f"  File 1: {line1.strip()}")
-                print(f"  File 2: {line2.strip()}\n")
-                identical = False
-                difference_count += 1
-
-            line_num += 1
-
-        # Check for extra lines
-        for _ in f1:
-            line_count1 += 1
-        for _ in f2:
-            line_count2 += 1
-
-    print("------ Summary ------")
-    print(f"File 1: {file1} — {line_count1} lines")
-    print(f"File 2: {file2} — {line_count2} lines")
-
-    if line_count1 != line_count2:
-        print("⚠️ Files have different lengths!")
-
-    if difference_count == 0 and line_count1 == line_count2:
-        print("✅ Files are numerically identical (within tolerance)!")
-    else:
-        print(f"⚠️ Total numerical differences found: {difference_count}")
 
 def plot_3D(vgC, threshold=0.1, s=5, draw_cell=True):
         """
@@ -407,7 +316,6 @@ def plot_2D_Py():
 def unit_test():
 	# Load atoms from VASP POSCAR
 	atoms = read("Nanotube.POSCAR")
-	#atoms.center(vacuum=1)
 
 	# Create voxel grid with resolution 0.3 Å
 	vg = VoxelGrid(atoms.cell, resolution=0.3)
@@ -421,7 +329,7 @@ def unit_test():
 		vgC.add_sphere(center=atom.position,
 		radius=covalent_radii[atom.number] * 1.7,
 		value=1)
-	"""
+
 	# Subtract "inner cores" (set to 0 inside)
 	for atom in atoms:
 		vg.set_sphere(center=atom.position,
@@ -430,7 +338,7 @@ def unit_test():
 		vgC.set_sphere(center=atom.position,
 		radius=covalent_radii[atom.number] * 1.5,
 		value=0)
-	"""
+	
 	result1 = np.array_equal(vg.cell, vgC.cell)
 	print("Unit Test 1 (cell equal): " + str(result1))  # True if all elements match exactly, False otherwise
 	
@@ -446,10 +354,6 @@ def unit_test():
 	result5 = np.allclose(vg.grid, vgC.grid)
 	print("Unit Test 5 (grid equal): " + str(result5))  # True if all elements match exactly, False otherwise
 	
-	result6 = np.allclose(vg.grid, vgC.grid, atol=1.0)
-	print("Unit Test 6 (grid allclose within ~1 unit): " + str(result6))
-	
-	"""
 	if not result5:
 		print("\nUnit Test 5 Failed!")
 		mask = ~np.isclose(vg.grid, vgC.grid);
@@ -458,10 +362,11 @@ def unit_test():
 		print("Amount of failing indices: " + str(len(indices)))
 		for i in range(len(indices)):
 			print(str(i) + ": " + str(indices[i]) + ", Py: " + str(vg.grid[indices[i][0]][indices[i][1]][indices[i][2]]) + ", C: " + str(vgC.grid[indices[i][0]][indices[i][1]][indices[i][2]]))
-	"""
+	
 def main():
 	#unit_test()
-	compare_files("outputZC.txt", "outputZPy.txt")
+	plot_3D_Py()
+	#plot_3D_C()
 	"""
 	start = time.perf_counter()
 	task1Py()
@@ -474,6 +379,4 @@ def main():
 	print(f"C++ Execution time: {end-start:.6f} seconds\n")
 	"""
 	return 0
-
-if __name__ == "__main__":
-    main()
+main()

@@ -1,0 +1,108 @@
+65 [18600] INFO perfrun.launcher <> - Launcher main begin
+71 [18600] INFO perfrun.launcher <> - MessageCatalogInit finished
+71 [18600] INFO perfrun.launcher <> - Launcher instance created
+71 [18600] INFO perfrun.launcher <> - argc = 7; cmdline = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\amplxe-runss.exe --ui-output-format xml --ui-output-fd 884 --option-file C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\config\runss.options 
+85 [18600] INFO perfrun.launcher <> - New signal handler callback was added
+134 [18600] INFO perfrun.perfcollector <> - SEP tool path: C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\sep.exe
+150 [18600] INFO perfrun.launcher <> - create msngr2::ICliToolContext
+150 [18600] INFO perfrun.launcher <> - create file finder object
+150 [18600] INFO perfrun.launcher <> - create a result directory: pattern = C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results pid = 4294967295
+155 [18600] INFO perfrun.launcher <> - create data directory = C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0
+156 [18600] INFO perfrun.launcher <> - Creating the master collection flag
+165 [18600] INFO perfrun.launcher <> - Done creating the master collection flag
+165 [18200] INFO perfrun.launcher <> - plugin [remoteplug] was disabled because it doesn't support the given collection type.
+166 [18200] INFO perfrun.sdk <> - Allocating TMU :C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0\systemcollector-7624-Ryans_Computer.sc
+166 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+170 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+170 [18200] INFO perfrun.launcher <> - plugin [gpu] was disabled because it doesn't support the given collection type.
+170 [18200] INFO perfrun.launcher <> - plugin [etw.kernel] was disabled because it doesn't support the given collection type.
+171 [18200] INFO perfrun.launcher <> - plugin [etw.dx] was disabled because it doesn't support the given collection type.
+171 [18200] INFO perfrun.launcher <> - plugin [etw.wsa] was disabled because it doesn't support the given collection type.
+171 [18200] INFO perfrun.mrte <> - system-wide mode is 0
+171 [18200] INFO perfrun.mrte <> - Getting  mrte profiling environment ...
+229 [18200] INFO perfrun.mrte <> - INTEL_MRTE_DATA_DIR=C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0
+229 [18200] INFO perfrun.mrte <> - INTEL_MRTE_HOST_NAME=Ryans_Computer
+229 [18200] INFO perfrun.mrte <> - JAVA_TOOL_OPTIONS=-agentlib:amplxe_samplingmrte_javaprof_1.0
+229 [18200] INFO perfrun.mrte <> - PATH=C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin32\runtime;C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\runtime;C:\Program Files (x86)\Microchip\mplabc30\v3.31\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\java8path;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\MATLAB\R2024a\bin;C:\Program Files (x86)\Microchip\MPLAB C32 Suite\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\Git\cmd;C:\Users\ryanm\AppData\Local\Programs\Python\Python313\Scripts\;C:\Users\ryanm\AppData\Local\Programs\Python\Python313\;C:\Users\ryanm\AppData\Local\Microsoft\WindowsApps;C:\msys64\mingw64\bin;C:\intelFPGA_lite\23.1std\questa_fse\win64;C:\Users\ryanm\OneDrive\Documents\boost_1_87_0\stage\lib;C:\Program Files\Java\jdk-23\bin;C:\Program Files\Java\jre1.8.0_431\bin;C:\raylib-5.0\src;C:\raylib-5.0\src\libraylib.a\;C:\Users\ryanm\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\ryanm\emsdk;C:\Users\ryanm\emsdk\upstream\bin;C:\Users\ryanm\emsdk\node\22.16.0_64bit\bin;C:\Users\ryanm\emsdk\upstream\emscripten;C:\Users\ryanm\AppData\Local\gitkraken\bin;C:\Program Files\MongoDB\Server\8.2\bin;C:\Program Files\MongoDB\mongosh-2.5.8-win32-x64\bin;C:\Program Files\MongoDB\mongodb-database-tools-windows-x86_64-100.13.0\bin;C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64;c:\Users\ryanm\.vscode\extensions\ms-python.debugpy-2025.14.1-win32-x64\bundled\scripts\noConfigScripts
+229 [18200] INFO perfrun.mrte <> - COR_ENABLE_PROFILING=1
+229 [18200] INFO perfrun.mrte <> - COR_PROFILER={AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+229 [18200] INFO perfrun.mrte <> - COMPLUS_ProfAPI_ProfilerCompatibilitySetting=EnableV2Profiler
+229 [18200] INFO perfrun.mrte <> - CORECLR_ENABLE_PROFILING=1
+229 [18200] INFO perfrun.mrte <> - CORECLR_PROFILER={AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+229 [18200] INFO perfrun.mrte <> - CORECLR_PROFILER_PATH=C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64/amplxe_samplingmrte_clrprof_1.0.dll
+229 [18200] INFO perfrun.mrte <> - INTEL_MRTE_PROFILER_MODE=mixed
+229 [18200] INFO perfrun.mrte <> - Data directory: C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0
+229 [18200] INFO perfrun.mrte <> - Mrte plugin is initialized
+229 [18200] INFO perfrun.launcher <> - plugin [emon] was disabled because it doesn't support the given collection type.
+229 [18200] INFO perfrun.launcher <> - plugin [cuscol] was disabled because it doesn't support the given collection type.
+229 [18200] INFO perfrun.launcher <> - plugin [stdsrc] was disabled because it doesn't support the given collection type.
+229 [18200] INFO perfrun.launcher <> - plugin [sep] was disabled because it doesn't support the given collection type.
+229 [18200] INFO perfrun.launcher <> - plugin [vtsspp] was disabled because it doesn't support the given collection type.
+229 [18200] INFO perfrun.launcher <> - plugin [perf] was disabled because it doesn't support the given collection type.
+229 [18200] INFO perfrun.launcher <> - plugin [aoclprofile] was disabled because it doesn't support the given collection type.
+229 [18200] INFO perfrun.tpss <> - initialize tpss controller
+229 [18200] INFO perfrun.tpss <> - configure collection mode: value = cpu:counters:nostack
+229 [18200] INFO perfrun.tpss <> - configure collection mode: value = cpu:stack
+229 [18200] INFO perfrun.tpss <> - default obj-size-min=1024
+230 [18200] INFO perfrun.tpss <> - default hash-table-size=0
+230 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [power] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [l0_metrics] was disabled because it doesn't support the given collection type.
+230 [18200] INFO perfrun.launcher <> - plugin [stall_reasons] was disabled because it doesn't support the given collection type.
+230 [18600] INFO perfrun.launcher <> - set environment variable: PATH = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin32\runtime;C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\runtime;C:\Program Files (x86)\Microchip\mplabc30\v3.31\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\java8path;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\MATLAB\R2024a\bin;C:\Program Files (x86)\Microchip\MPLAB C32 Suite\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\Git\cmd;C:\Users\ryanm\AppData\Local\Programs\Python\Python313\Scripts\;C:\Users\ryanm\AppData\Local\Programs\Python\Python313\;C:\Users\ryanm\AppData\Local\Microsoft\WindowsApps;C:\msys64\mingw64\bin;C:\intelFPGA_lite\23.1std\questa_fse\win64;C:\Users\ryanm\OneDrive\Documents\boost_1_87_0\stage\lib;C:\Program Files\Java\jdk-23\bin;C:\Program Files\Java\jre1.8.0_431\bin;C:\raylib-5.0\src;C:\raylib-5.0\src\libraylib.a\;C:\Users\ryanm\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\ryanm\emsdk;C:\Users\ryanm\emsdk\upstream\bin;C:\Users\ryanm\emsdk\node\22.16.0_64bit\bin;C:\Users\ryanm\emsdk\upstream\emscripten;C:\Users\ryanm\AppData\Local\gitkraken\bin;C:\Program Files\MongoDB\Server\8.2\bin;C:\Program Files\MongoDB\mongosh-2.5.8-win32-x64\bin;C:\Program Files\MongoDB\mongodb-database-tools-windows-x86_64-100.13.0\bin;C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64;c:\Users\ryanm\.vscode\extensions\ms-python.debugpy-2025.14.1-win32-x64\bundled\scripts\noConfigScripts
+230 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_LIBITTNOTIFY32 = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin32\runtime\ittnotify_collector.dll
+230 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_LIBITTNOTIFY64 = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\runtime\ittnotify_collector.dll
+231 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_ITTNOTIFY_GROUPS = 
+231 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_JIT_PROFILER32 = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin32\runtime\ittnotify_collector.dll
+231 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_JIT_PROFILER64 = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\runtime\ittnotify_collector.dll
+231 [18600] INFO perfrun.launcher <> - set environment variable: CCL_ITT_LEVEL = 1
+231 [18600] INFO perfrun.launcher <> - set environment variable: ENABLE_JITPROFILING = 1
+231 [18600] INFO perfrun.launcher <> - set environment variable: CL_CONFIG_USE_VTUNE = True
+231 [18600] INFO perfrun.launcher <> - set environment variable: KMP_FORKJOIN_FRAMES = 0
+231 [18600] INFO perfrun.launcher <> - set environment variable: KMP_FORKJOIN_FRAMES_MODE = 0
+231 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_DATA_DIR = C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0
+231 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_HOST_NAME = Ryans_Computer
+231 [18600] INFO perfrun.launcher <> - set environment variable: JAVA_TOOL_OPTIONS = -agentlib:amplxe_samplingmrte_javaprof_1.0
+232 [18600] INFO perfrun.launcher <> - set environment variable: PATH = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin32\runtime;C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\runtime;C:\Program Files (x86)\Microchip\mplabc30\v3.31\bin;C:\Program Files\Common Files\Oracle\Java\javapath;C:\Program Files (x86)\Common Files\Oracle\Java\java8path;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\MATLAB\R2024a\bin;C:\Program Files (x86)\Microchip\MPLAB C32 Suite\bin;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Program Files\Git\cmd;C:\Users\ryanm\AppData\Local\Programs\Python\Python313\Scripts\;C:\Users\ryanm\AppData\Local\Programs\Python\Python313\;C:\Users\ryanm\AppData\Local\Microsoft\WindowsApps;C:\msys64\mingw64\bin;C:\intelFPGA_lite\23.1std\questa_fse\win64;C:\Users\ryanm\OneDrive\Documents\boost_1_87_0\stage\lib;C:\Program Files\Java\jdk-23\bin;C:\Program Files\Java\jre1.8.0_431\bin;C:\raylib-5.0\src;C:\raylib-5.0\src\libraylib.a\;C:\Users\ryanm\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\ryanm\emsdk;C:\Users\ryanm\emsdk\upstream\bin;C:\Users\ryanm\emsdk\node\22.16.0_64bit\bin;C:\Users\ryanm\emsdk\upstream\emscripten;C:\Users\ryanm\AppData\Local\gitkraken\bin;C:\Program Files\MongoDB\Server\8.2\bin;C:\Program Files\MongoDB\mongosh-2.5.8-win32-x64\bin;C:\Program Files\MongoDB\mongodb-database-tools-windows-x86_64-100.13.0\bin;C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64;c:\Users\ryanm\.vscode\extensions\ms-python.debugpy-2025.14.1-win32-x64\bundled\scripts\noConfigScripts
+232 [18600] INFO perfrun.launcher <> - set environment variable: COR_ENABLE_PROFILING = 1
+232 [18600] INFO perfrun.launcher <> - set environment variable: COR_PROFILER = {AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+232 [18600] INFO perfrun.launcher <> - set environment variable: COMPLUS_ProfAPI_ProfilerCompatibilitySetting = EnableV2Profiler
+232 [18600] INFO perfrun.launcher <> - set environment variable: CORECLR_ENABLE_PROFILING = 1
+232 [18600] INFO perfrun.launcher <> - set environment variable: CORECLR_PROFILER = {AA5E4821-E3B1-479c-B7FF-5AD047D22CED}
+232 [18600] INFO perfrun.launcher <> - set environment variable: CORECLR_PROFILER_PATH = C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64/amplxe_samplingmrte_clrprof_1.0.dll
+232 [18600] INFO perfrun.launcher <> - set environment variable: INTEL_MRTE_PROFILER_MODE = mixed
+232 [18600] INFO perfrun.launcher <> - RpcServer: run RPC server to handle requests
+243 [18600] INFO perfrun.sdk <> - IProcessUtil: the given executable 'python' is valid.
+244 [18600] INFO perfrun.launcher <> - Launcher: command line to start before modification = python myscript.py
+246 [18600] INFO perfrun.launcher <> - Launcher: command line to start after modification = C:\Program Files (x86)\Intel\oneAPI\vtune\2025.7\bin64\pin.exe -error_file C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0\pinerr.tpsslog -detach_reattach -probe -follow_execv -p32 C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin32\pin.exe -p64 C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\pin.exe -t64 C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin64\tpsstool.dll -t C:\Program Files (x86)\Intel\oneAPI\vtune\latest\bin32\tpsstool.dll -server_name tpss_ipc.7624 -prd_dir C:\Program Files (x86)\Intel\oneAPI\vtune\2025.7 -- python myscript.py
+247 [18600] INFO perfrun.launcher <> - ProcessCreator object was created
+250 [18600] INFO perfrun.launcher <> - Launcher: the process was started in suspend mode
+253 [18200] INFO perfrun.itt <> - start itt controller for pid #13372
+254 [18200] INFO perfrun.tpss <> - start tpss controller for pid #13372
+309 [18600] INFO perfrun.launcher <> - Launcher: all plugins were started
+310 [18600] INFO perfrun.launcher <> - DirectoryMonitor object was created
+310 [18600] INFO perfrun.launcher <> - DirectoryMonitor: a callback was added
+310 [18600] INFO perfrun.launcher <> - DirectoryMonitor was started with pingTime = 1000
+310 [18600] INFO perfrun.launcher <> - DeadlineTimer is going to be constructed
+311 [18600] INFO perfrun.launcher <> - DeadlineTimer: a callback was added
+322 [18600] INFO perfrun.launcher <> - Launcher: resume the profiled application and  wait its termination or stop command
+601 [18600] WARN perfrun.sdk <> - Unexpected exit status - 2, at file: vcs\perfrun1\sdk\src\utils_win.cpp:541
+601 [18600] INFO perfrun.launcher <> - Launcher: the profiled application was terminated  with exit code = 2
+613 [18200] INFO perfrun.itt <> - detach itt controller
+614 [18200] INFO perfrun.itt <> - detach itt controller done
+614 [18200] INFO perfrun.tpss <> - stop tpss controller
+614 [18200] INFO perfrun.sdk <> - De-allocating TMU: C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0\systemcollector-7624-Ryans_Computer.sc
+636 [18200] INFO perfrun.system <> - closed the system trace file: C:\Users\ryanm\OneDrive\Documents\ResearchProject1\vtune_results\data.0\systemcollector-7624-Ryans_Computer.sc
+636 [18600] INFO perfrun.launcher <> - Launcher: all plugins were stopped.
+636 [18600] INFO perfrun.launcher <> - DeadlineTimer is going to be destroyed
+637 [18600] INFO perfrun.launcher <> - DeadlineTimer was destroyed
+637 [18600] INFO perfrun.launcher <> - DirectoryMonitor object was destroyed
+637 [18600] WARN perfrun.launcher <> - Stop command is ignored because it is received when collection is already stopped, at file: vcs\perfrun1\launcher\src\command_handler.cpp:226
+638 [18600] INFO perfrun.launcher <> - Application exit code: 2
+638 [18600] INFO perfrun.launcher <> - Exit code: 4

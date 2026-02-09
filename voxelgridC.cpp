@@ -16,12 +16,23 @@
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
+#include <fstream>
 namespace py = pybind11;
 
 //C++ and Python's % operator work differently
 //so this is a work around
 inline int wrap_index(int idx, int dim) {
-    return (idx % dim + dim) % dim; // always in [0, dim-1]
+	int z = (idx % dim + dim) % dim;
+    return z;
+}
+
+//C++ and Python's % operator work differently
+//so this is a work around
+//Caveat that when idx == dim it returns dim
+double wrap_index_double(double idx, double dim) {
+    if (std::abs(idx - dim) < 1e-12)  //handle small numbers really close to dim and dim not to wrap around
+        return dim;
+    return idx - dim * floor(idx / dim);
 }
 
 //The Actual VoxelGridC Class
@@ -158,9 +169,13 @@ public:
     void add_sphere(const Eigen::Vector3d& center, float radius, float value = 1.0f) {
         auto grid = this->grid.mutable_unchecked<3>();
         
-        Eigen::Vector3d center_frac = (cell_inv * center).array().floor().matrix();
-		center_frac = (cell_inv * center) - center_frac; // wrap into [0,1)
+        Eigen::Vector3d center_frac = cell_inv * center; //Matrix Multiplication
+		for (int i = 0; i < 3; ++i) center_frac[i] = wrap_index_double(center_frac[i], 1.0); //Wrap all values into [0, 1)
 		Eigen::Vector3i center_idx = (center_frac.array() * gpts.cast<double>().array()).floor().cast<int>();
+		//std::ofstream file("outputC.txt", std::ios::app);
+			//file << center_idx[2] << "\n";
+			//file << gpts.cast<double>()[2] << "\n";
+		//file.close();
 		py::array_t<bool> maskArray = cached_sphere_mask(radius);
         auto mask = maskArray.mutable_unchecked<3>();
         
@@ -174,7 +189,8 @@ public:
         int oy = int(my * 0.5);
         int oz = int(mz * 0.5);
         
-        #pragma omp parallel for collapse(3) schedule(static)
+        //#pragma omp parallel for collapse(1) schedule(static)
+        std::ofstream file("outputZC.txt", std::ios::app);
         for (int i = 0; i < mx; ++i) {
 			for (int j = 0; j < my; ++j) {
 				for (int k = 0; k < mz; ++k) {
@@ -183,10 +199,12 @@ public:
 						int y = wrap_index(center_idx[1] + j - oy, ny);
 						int z = wrap_index(center_idx[2] + k - oz, nz);
 						grid(x, y, z) += value;
+						file << z << "\n";
 					}
 				}
 			}
 		}
+		file.close();
     }
     
     //Multiply Sphere

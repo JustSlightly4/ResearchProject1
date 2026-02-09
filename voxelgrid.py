@@ -42,20 +42,22 @@ def _set_sphere_mask(grid, center_idx, mask, value):
                     grid[x, y, z] = value
 
 
-@njit(parallel=True)
+#@njit(parallel=True)
 def _add_sphere_mask(grid, center_idx, mask, value):
     nx, ny, nz = grid.shape
     mx, my, mz = mask.shape
     ox, oy, oz = mx // 2, my // 2, mz // 2
     #print("Grid x, y, z: " + str(nx) + ", " + str(ny) + ", " + str(nz), "Mask x, y, z: " + str(ox) + ", " + str(oy) + ", " + str(oz))
-    for i in prange(mx):
-        for j in range(my):
-            for k in range(mz):
-                if mask[i, j, k]:
-                    x = (center_idx[0] + i - ox) % nx
-                    y = (center_idx[1] + j - oy) % ny
-                    z = (center_idx[2] + k - oz) % nz
-                    grid[x, y, z] += value
+    with open("outputZPy.txt", "a") as file:
+        for i in prange(mx):
+            for j in range(my):
+                for k in range(mz):
+                    if mask[i, j, k]:
+                        x = (center_idx[0] + i - ox) % nx
+                        y = (center_idx[1] + j - oy) % ny
+                        z = (center_idx[2] + k - oz) % nz
+                        grid[x, y, z] += value
+                        file.write(str(z) + "\n")
 
 
 @njit(parallel=True)
@@ -344,8 +346,14 @@ class VoxelGrid(object):
 
 
     def add_sphere(self, center, radius, value=1):
-        center_frac = center @ self.cell_inv % 1.0
+        center_frac = center @ self.cell_inv
+        center_frac = center_frac % 1.0
         center_idx = np.floor(center_frac * self.gpts).astype(np.int32)
+        """
+        with open("outputPy.txt", "a") as file:
+            file.write(str(center_idx[2]) + "\n")
+            file.write(str(self.gpts[2]) + "\n")
+        """
         mask = _cached_sphere_mask(radius, tuple(self.gpts), tuple(map(tuple, self.cell)))
         _add_sphere_mask(self.grid, center_idx, mask.astype(np.uint8), value)
 
